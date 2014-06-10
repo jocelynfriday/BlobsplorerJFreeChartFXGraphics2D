@@ -7,5 +7,6 @@
 	<classpathentry kind="lib" path="/Users/jocelynfriday/Documents/workspace/BlobsplorerJFreeChartFXGraphics2D/fxgraphics2d-1.0/fxgraphics2d-1.0.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/JCommon 1.0.21"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/JFreeChart"/>
+	<classpathentry kind="lib" path="/Users/jocelynfriday/Documents/workspace/BlobsplorerJFreeChartFXGraphics2D/jfreechart-fse-1.0-SNAPSHOT.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -5,16 +5,16 @@ public class Contig
 {
 	private String ID;
 	private int len;
-	private float gc;
-	private float [] cov = new float[3];
+	private double gc;
+	private double [] cov = new double[3];
 	private String [] tax = new String[4];
 	private double eValue;
 	
-	public Contig (String ID, int len, float gc, float [] cov, String [] tax, double eVal)
+	public Contig (String ID, int len, double gc2, double[] cov, String [] tax, double eVal)
 	{
 		this.ID = ID;
 		this.len = len;
-		this.gc = gc;
+		this.gc = gc2;
 		this.cov = cov;
 		this.tax = tax;
 		this.eValue = eVal;
@@ -30,12 +30,12 @@ public class Contig
 		return len;
 	}
 	
-	public float getGC()
+	public double getGC()
 	{
 		return gc;
 	}
 	
-	public float [] getCov()
+	public double [] getCov()
 	{
 		return cov;
 	}
@@ -48,6 +48,11 @@ public class Contig
 	public double getEValue()
 	{
 		return eValue;
+	}
+	
+	public void setCovAtPos(int i, double value)
+	{
+		cov[i] = value;
 	}
 
 }
