@@ -51,14 +51,11 @@ import org.jfree.data.general.Dataset;
 import org.jfree.data.general.SelectionChangeEvent;
 import org.jfree.data.general.SelectionChangeListener;
 import org.jfree.data.xy.DefaultXYZDataset;
-import org.jfree.data.xy.XYDataset;
-import org.jfree.data.xy.XYSeries;
-import org.jfree.data.xy.XYSeriesCollection;
 import org.jfree.data.xy.XYZDataset;
 
 public class Charts extends JFrame  implements SelectionChangeListener<XYCursor>
 {
-	private XYSeriesCollection dataset;
+	private XYZDataset dataset;
 	private DefaultTableModel model;
 	private JTable table;
 	private static ArrayList <Contig> contigSet = new ArrayList<Contig>();
@@ -77,11 +74,11 @@ public class Charts extends JFrame  implements SelectionChangeListener<XYCursor>
 		chartPanel.setPreferredSize(new Dimension(500, 270));
 		JFreeChart chart = chartPanel.getChart();
 		XYPlot plot = (XYPlot)chart.getPlot();
-		this.dataset = ((XYSeriesCollection)plot.getDataset());
+		this.dataset = ((XYZDataset)plot.getDataset());
 		JSplitPane split = new JSplitPane(1);
 		split.add(chartPanel);
 		
-	    this.model = new DefaultTableModel(new String[] { "Series:", "Item:", "X:", "Y:" }, 0);
+	    this.model = new DefaultTableModel(new String[] { "Series:", "Item:", "X:", "Y:", "Z:" }, 0);
 	    this.table = new JTable(this.model);
 	    TableColumnModel tcm = this.table.getColumnModel();
 	    tcm.getColumn(2).setCellRenderer(new NumberCellRenderer());
@@ -97,9 +94,9 @@ public class Charts extends JFrame  implements SelectionChangeListener<XYCursor>
 
 	private final JPanel createScatterPanel() 
 	{
-		XYDataset dataset = createDataset();
+		DefaultXYZDataset dataset = createDataset();
 
-		DatasetSelectionExtension<XYCursor> datasetExtension = new XYDatasetSelectionExtension(dataset);
+		DatasetSelectionExtension<XYCursor> datasetExtension = new XYZDatasetSelectionExtension(dataset);
 		datasetExtension.addChangeListener(this);
 		
 		JFreeChart chart = createChart(dataset, datasetExtension);
@@ -122,9 +119,9 @@ public class Charts extends JFrame  implements SelectionChangeListener<XYCursor>
 		return panel;
 	}
 
-	private JFreeChart createChart(XYDataset dataset, DatasetSelectionExtension<XYCursor> datasetExtension) 
+	private JFreeChart createChart(XYZDataset dataset, DatasetSelectionExtension<XYCursor> datasetExtension) 
 	{
-		JFreeChart chart = ChartFactory.createScatterPlot("BloobSplorer", "GC", "COV", dataset);
+		JFreeChart chart = ChartFactory.createBubbleChart("BloobSplorer", "GC", "COV", dataset);
 
 		XYPlot plot = (XYPlot)chart.getPlot();
 		plot.setNoDataMessage("NO DATA");
@@ -150,9 +147,10 @@ public class Charts extends JFrame  implements SelectionChangeListener<XYCursor>
 
 	}
 
-	private XYDataset createDataset() 
+	private DefaultXYZDataset createDataset() 
 	{
-		XYSeriesCollection dataset = new XYSeriesCollection();
+		System.out.println("In createDataset()");
+		DefaultXYZDataset dataset = new DefaultXYZDataset();
 		double[] gc;
 		double [] cov;
 		double [] len;
@@ -167,8 +165,7 @@ public class Charts extends JFrame  implements SelectionChangeListener<XYCursor>
 			ArrayList<Contig> taxaSet = contigByTaxa.get(taxa);
 			gc = new double [taxaSet.size()];
 			cov = new double [taxaSet.size()];
-			//len = new double [taxaSet.size()];
-			XYSeries series = new XYSeries(taxa);
+			len = new double [taxaSet.size()];
 			for(int j = 0; j < taxaSet.size(); j ++)
 			{	
 				//as 0 cannot be displayed on log scale, set libraries where coverage is 0 to small value
@@ -178,45 +175,13 @@ public class Charts extends JFrame  implements SelectionChangeListener<XYCursor>
 				}
 				cov[j] =contigSet.get(j).getCov()[covLevel];
 				gc[j] = contigSet.get(j).getGC();
-				series.add(contigSet.get(j).getCov()[covLevel],contigSet.get(j).getGC());
-				//len[j] = (contigSet.get(j).getLen()/20.0);
+				len[j] = (contigSet.get(j).getLen()/20.0);
 			}
-			//double [][] addMe = {gc, cov //len};
-			//dataset.addSeries(taxa, addMe);
-			dataset.addSeries(series);
+			double [][] addMe = {gc, cov, len};
+			dataset.addSeries(taxa, addMe);
 		}
 		return dataset;
 
-		/*
-		 * int size = taxLevelCount.get(key);
-			gc = new double [size];
-			cov = new double [size];
-			len = new double [size];
-			int count = 0;
-			for (int j = 0; j < contigSet.size(); j ++)
-			{
-				if(key.equals(contigSet.get(j).getTax()[taxLevel])) //If mapping taxa level matches desired taxa to be charted
-				{
-
-					if((double)contigSet.get(j).getCov()[covLevel] == 0)
-					{
-						contigSet.get(j).setCovAtPos(covLevel, 1E-10);
-					}
-
-
-					cov[count] =contigSet.get(j).getCov()[covLevel];
-					gc[count] = contigSet.get(j).getGC();
-					len[count] = (contigSet.get(j).getLen()/20.0);
-					count ++;
-				}
-
-			}
-			double addMe[][] = {Arrays.copyOf(gc, count), Arrays.copyOf(cov, count),Arrays.copyOf(len, count)};
-			dataset.addSeries(key, addMe);
-		}
-		return dataset;
-	}
-		 */
 	}
 
 	//**Should I create a treeMap to ease sorting?
@@ -500,16 +465,18 @@ public class Charts extends JFrame  implements SelectionChangeListener<XYCursor>
 			this.model.removeRow(0);
 		}
 
-		XYDatasetSelectionExtension ext = (XYDatasetSelectionExtension)event.getSelectionExtension();
+		XYZDatasetSelectionExtension ext = (XYZDatasetSelectionExtension)event.getSelectionExtension();
 	    DatasetIterator itr = ext.getSelectionIterator(true);
 
 		while(itr.hasNext())
 		{
+			System.out.println("has next");
 			XYCursor dc = (XYCursor)itr.next();
 			Comparable seriesKey = this.dataset.getSeriesKey(dc.series);
 			Number x = this.dataset.getX(dc.series, dc.item);
-			Number y = this.dataset.getX(dc.series, dc.item);
-			this.model.addRow(new Object[] {seriesKey, new Integer(dc.item), x, y});
+			Number y = this.dataset.getY(dc.series, dc.item);
+			Number z = this.dataset.getZ(dc.series, dc.item);
+			this.model.addRow(new Object[] {seriesKey, new Integer(dc.item), x, y, y});
 		}
 	}
 

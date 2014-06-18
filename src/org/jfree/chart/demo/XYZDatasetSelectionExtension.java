@@ -5,16 +5,17 @@ import org.jfree.data.extension.impl.AbstractDatasetSelectionExtension;
 import org.jfree.data.extension.impl.XYCursor;
 import org.jfree.data.general.DatasetChangeEvent;
 import org.jfree.data.general.SelectionChangeListener;
+import org.jfree.data.xy.DefaultXYZDataset;
 import org.jfree.data.xy.XYZDataset;
 
 import java.util.ArrayList;
 public class XYZDatasetSelectionExtension extends AbstractDatasetSelectionExtension<XYCursor, XYZDataset> implements IterableSelection<XYCursor>
 	{
 		private static final long serialVersionUID = 4859712483757720877L;
-		private XYZDataset dataset;
+		private DefaultXYZDataset dataset;
 		private ArrayList<Boolean>[] selectionData;
 
-		public XYZDatasetSelectionExtension(XYZDataset dataset)
+		public XYZDatasetSelectionExtension(DefaultXYZDataset dataset)
 		{
 			super(dataset);
 			this.dataset = dataset;
@@ -40,8 +41,7 @@ public class XYZDatasetSelectionExtension extends AbstractDatasetSelectionExtens
 
 		public void setSelected(XYCursor cursor, boolean selected)
 		{
-			this.selectionData[cursor.series].set(cursor.item, 
-					Boolean.valueOf(selected));
+			this.selectionData[cursor.series].set(cursor.item, Boolean.valueOf(selected));
 
 			notifyIfRequired();
 		}
