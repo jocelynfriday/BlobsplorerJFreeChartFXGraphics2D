@@ -675,6 +675,7 @@ public class Charts extends JFrame  implements SelectionChangeListener<XYCursor>
 	@Override
 	public void selectionChanged(SelectionChangeEvent<XYCursor> event) 
 	{
+		long start = System.nanoTime();
 		while(this.model.getRowCount() > 0)
 		{
 			this.model.removeRow(0);
@@ -689,14 +690,13 @@ public class Charts extends JFrame  implements SelectionChangeListener<XYCursor>
 		{
 			XYCursor dc = (XYCursor)itr.next();
 			Comparable seriesKey = this.dataset.getSeriesKey(dc.series);
-			System.out.println("item" + dc.item);
-			Number x = this.dataset.getX(dc.series, dc.item);
-			Number y = this.dataset.getY(dc.series, dc.item);
 			ArrayList<Contig> taxa = contigByTaxa.get(seriesKey);
 			selected.add(taxa.get(dc.item));
 		}
-		long end = System.nanoTime();
 		statistics(selected);
+		long end = System.nanoTime();
+		System.out.println("Elapsed time of selection and statistics: " + (end - start));
+		
 	}
 	
 
