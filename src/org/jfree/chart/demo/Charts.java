@@ -4,6 +4,8 @@ import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -11,6 +13,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -19,6 +22,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.swing.BorderFactory;
+import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -32,14 +36,17 @@ import javax.swing.table.TableColumnModel;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.LogAxis;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.axis.NumberTickUnit;
 import org.jfree.chart.panel.selectionhandler.EntitySelectionManager;
 import org.jfree.chart.panel.selectionhandler.FreePathSelectionHandler;
 import org.jfree.chart.panel.selectionhandler.MouseClickSelectionHandler;
+import org.jfree.chart.panel.selectionhandler.RectangularRegionSelectionHandler;
 import org.jfree.chart.panel.selectionhandler.RegionSelectionHandler;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.item.IRSUtilities;
+import org.jfree.chart.renderer.xy.XYDotRenderer;
 import org.jfree.chart.renderer.xy.XYItemRenderer;
 import org.jfree.chart.ui.NumberCellRenderer;
 import org.jfree.data.extension.DatasetIterator;
@@ -51,59 +58,97 @@ import org.jfree.data.general.Dataset;
 import org.jfree.data.general.SelectionChangeEvent;
 import org.jfree.data.general.SelectionChangeListener;
 import org.jfree.data.xy.DefaultXYZDataset;
+import org.jfree.data.xy.XYDataset;
+import org.jfree.data.xy.XYSeries;
+import org.jfree.data.xy.XYSeriesCollection;
 import org.jfree.data.xy.XYZDataset;
 
 public class Charts extends JFrame  implements SelectionChangeListener<XYCursor>
 {
-	private XYZDataset dataset;
+	//private XYDataset dataset;
+	private XYSeriesCollection dataset;
 	private DefaultTableModel model;
 	private JTable table;
 	private static ArrayList <Contig> contigSet = new ArrayList<Contig>();
-	private static int taxaLevel;
-	private static int covLevel = 0; // which cov library to use //** needs to be added to UI
+	private static int numberOfTaxaDisplayed;
+	private static int taxaIndex = 0;
+	private static int covLibraryIndex = 0; // which cov library to use //** needs to be added to UI
 	private static HashMap<String, ArrayList<Contig>> contigByTaxa = new HashMap<String, ArrayList<Contig>>();
 	private static HashMap <String, Integer> taxLevelSpan = new HashMap <String, Integer>();
+	private static ArrayList<String> topTaxaBySpan = new ArrayList<String>();
+	private static int totalLength = 0;
 
 
 	public Charts(File file, int taxLevel, double eValue, String title)
 	{
 		super(title);
-		taxaLevel = taxLevel;
+		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		numberOfTaxaDisplayed = taxLevel;
 		readFile(file, eValue); // might add boolean check later
 		ChartPanel chartPanel = (ChartPanel)createScatterPanel();
 		chartPanel.setPreferredSize(new Dimension(500, 270));
 		JFreeChart chart = chartPanel.getChart();
 		XYPlot plot = (XYPlot)chart.getPlot();
-		this.dataset = ((XYZDataset)plot.getDataset());
+		this.dataset = ((XYSeriesCollection)plot.getDataset());
 		JSplitPane split = new JSplitPane(1);
 		split.add(chartPanel);
-		
-	    this.model = new DefaultTableModel(new String[] { "Series:", "Item:", "X:", "Y:", "Z:" }, 0);
-	    this.table = new JTable(this.model);
-	    TableColumnModel tcm = this.table.getColumnModel();
-	    tcm.getColumn(2).setCellRenderer(new NumberCellRenderer());
-	    tcm.getColumn(3).setCellRenderer(new NumberCellRenderer());
-	    JPanel p = new JPanel(new BorderLayout());
-	    JScrollPane scroller = new JScrollPane(this.table);
-	    p.add(scroller);
-	    p.setBorder(BorderFactory.createCompoundBorder(new TitledBorder("Selected Items: "), new EmptyBorder(4, 4, 4, 4)));
 
-	    split.add(p);
-	    setContentPane(split);
+		this.model = new DefaultTableModel(new String[] { "Statistic:", "Value:", ""}, 0);
+		this.table = new JTable(this.model);
+		TableColumnModel tcm = this.table.getColumnModel();
+		tcm.getColumn(2).setCellRenderer(new NumberCellRenderer());
+		JPanel p = new JPanel(new BorderLayout());
+		JScrollPane scroller = new JScrollPane(this.table);
+		p.add(scroller);
+		p.setBorder(BorderFactory.createCompoundBorder(new TitledBorder("Statistics of Selected: "), new EmptyBorder(4, 4, 4, 4)));
+
+		split.add(p);
+		/*
+	    JPanel boxPanel = new JPanel();
+	   	for (int i = 0; i < topTaxaBySpan.size(); i ++)
+	   	{
+	   		JCheckBox box = new JCheckBox(topTaxaBySpan.get(i));
+	   		box.setActionCommand(topTaxaBySpan.get(i));
+	   		box.addActionListener((ActionListener) this);
+	   		box.setSelected(true);
+	   		boxPanel.add(box);
+	   	}
+		 */
+		setContentPane(split);
+		// add(boxPanel, BorderLayout.SOUTH);
 	}
-
-	private final JPanel createScatterPanel() 
+	/*
+	public void actionPerformed (ActionEvent e)
 	{
-		DefaultXYZDataset dataset = createDataset();
+		int series = -1;
+		for (int i = 0; i < topTaxaBySpan.size(); i ++)
+		{
+			if (e.getActionCommand().equals(topTaxaBySpan.get(i)))
+			{
+				series = i;
+				break;
+			}
+		}
+		if (series >= 0)
+		{//	boolean visible = this.renderer.getItemVisible(series, 0);
+			//this.renderer.setSeriesVisible(series, Boolean.valueOf(!visible));
 
-		DatasetSelectionExtension<XYCursor> datasetExtension = new XYZDatasetSelectionExtension(dataset);
+		}
+	}
+	 */
+
+	private JPanel createScatterPanel() 
+	{
+		XYDataset dataset = createDataset();
+
+		DatasetSelectionExtension datasetExtension = new XYDatasetSelectionExtension(dataset);
 		datasetExtension.addChangeListener(this);
-		
+
 		JFreeChart chart = createChart(dataset, datasetExtension);
 		ChartPanel panel = new ChartPanel(chart);
 		panel.setMouseWheelEnabled(true);
 
-		RegionSelectionHandler selectionHandler = new FreePathSelectionHandler();
+		RegionSelectionHandler selectionHandler = new RectangularRegionSelectionHandler();
 
 		panel.addMouseHandler(selectionHandler);
 		panel.addMouseHandler(new MouseClickSelectionHandler());
@@ -119,9 +164,9 @@ public class Charts extends JFrame  implements SelectionChangeListener<XYCursor>
 		return panel;
 	}
 
-	private JFreeChart createChart(XYZDataset dataset, DatasetSelectionExtension<XYCursor> datasetExtension) 
+	private JFreeChart createChart(XYDataset dataset, DatasetSelectionExtension<XYCursor> datasetExtension) 
 	{
-		JFreeChart chart = ChartFactory.createBubbleChart("BloobSplorer", "GC", "COV", dataset);
+		JFreeChart chart = ChartFactory.createScatterPlot("BlobSplorer", "GC", "COV", dataset);
 
 		XYPlot plot = (XYPlot)chart.getPlot();
 		plot.setNoDataMessage("NO DATA");
@@ -133,52 +178,62 @@ public class Charts extends JFrame  implements SelectionChangeListener<XYCursor>
 		plot.setDomainGridlineStroke(new BasicStroke (0.0f));
 		plot.setRangeGridlineStroke(new BasicStroke(0.0f));
 
-		XYItemRenderer r = (XYItemRenderer) plot.getRenderer();
+		XYDotRenderer r = new XYDotRenderer();
+		r.setDotWidth(4);
+		r.setDotHeight(4);
+		plot.setRenderer(r);
+		//XYItemRenderer r = (XYItemRenderer) plot.getRenderer();
 		//r.setSeriesFillPaint(0, Color.GRAY);
 
 		NumberAxis domainAxis = (NumberAxis)plot.getDomainAxis();
 		domainAxis.setRange(0.00, 1.00);
 		domainAxis.setTickUnit(new NumberTickUnit(0.1));
 
-		//IRSUtilities.setSelectedItemFillPaint(r, datasetExtension, Color.white);
+		LogAxis yAxis = new LogAxis("COV");
+		plot.setRangeAxis(yAxis);
+
+		//IRSUtilities.setSelectedItemOutlinePaint(r, datasetExtension, Color.white);
 
 		datasetExtension.addChangeListener(plot);
 		return chart;
 
 	}
 
-	private DefaultXYZDataset createDataset() 
+	private XYDataset createDataset() 
 	{
-		System.out.println("In createDataset()");
-		DefaultXYZDataset dataset = new DefaultXYZDataset();
-		double[] gc;
-		double [] cov;
-		double [] len;
-		
+		//DefaultXYZDataset dataset = new DefaultXYZDataset();
+		//double[] gc;
+		//double [] cov;
+		//double [] len;
+
+		XYSeriesCollection dataset = new XYSeriesCollection();
 		ArrayList<String> topTaxa = getTopTaxa();
-		System.out.println(topTaxa.size());
+		topTaxaBySpan = sortBySpan(topTaxa);
 		ArrayList<String> taxaForDisplay = sortBySpan(topTaxa); // ArrayList containing top taxa which need to be displayed
-		
+
 		for(int i = 0; i < taxaForDisplay.size(); i ++) //loop through arrayLists associated with top taxa by span
 		{
 			String taxa = taxaForDisplay.get(i);
 			ArrayList<Contig> taxaSet = contigByTaxa.get(taxa);
-			gc = new double [taxaSet.size()];
-			cov = new double [taxaSet.size()];
-			len = new double [taxaSet.size()];
+			//gc = new double [taxaSet.size()];
+			//	cov = new double [taxaSet.size()];
+			XYSeries series = new XYSeries(taxa); 
+			//len = new double [taxaSet.size()];
 			for(int j = 0; j < taxaSet.size(); j ++)
 			{	
 				//as 0 cannot be displayed on log scale, set libraries where coverage is 0 to small value
-				if ((double)taxaSet.get(j).getCov()[covLevel] == 0)
+				if ((double)taxaSet.get(j).getCov()[covLibraryIndex] == 0)
 				{
-					taxaSet.get(j).setCovAtPos(covLevel, 1E-10);
+					taxaSet.get(j).setCovAtPos(covLibraryIndex, 1E-10);
 				}
-				cov[j] =contigSet.get(j).getCov()[covLevel];
-				gc[j] = contigSet.get(j).getGC();
-				len[j] = (contigSet.get(j).getLen()/20.0);
+				//cov[j] =taxaSet.get(j).getCov()[covLevel];
+				//gc[j] = taxaSet.get(j).getGC();
+				series.add(taxaSet.get(j).getGC(), taxaSet.get(j).getCov()[covLibraryIndex]);
+				//len[j] = (contigSet.get(j).getLen()/20.0);
 			}
-			double [][] addMe = {gc, cov, len};
-			dataset.addSeries(taxa, addMe);
+			//double [][] addMe = {gc, cov, len};
+			//dataset.addSeries(taxa, addMe);
+			dataset.addSeries(series);
 		}
 		return dataset;
 
@@ -199,19 +254,20 @@ public class Charts extends JFrame  implements SelectionChangeListener<XYCursor>
 			String key = itr.next();
 			topTaxa = sortTaxa(key,topTaxa);
 		}
-		if (taxaLevel >= topTaxa.size()) //size of sorted array is less than max number of listed taxa?
+
+
+		if (numberOfTaxaDisplayed >= topTaxa.size()) //size of sorted array is less than max number of listed taxa?
 		{
-			System.out.println("Did not need to trim");
 			return topTaxa; 
 		}
 		else
 		{
-			List<String> truncated = topTaxa.subList(0, taxaLevel);
+			List<String> truncated = topTaxa.subList(0, numberOfTaxaDisplayed);
 			return new ArrayList<String>(truncated);
 		}
 
 	}
-	
+
 	/*
 	 * Returns an ArrayList of Taxa sorted by their span
 	 */
@@ -222,9 +278,10 @@ public class Charts extends JFrame  implements SelectionChangeListener<XYCursor>
 		{
 			sorted = sortSpan(sorted, unsorted.get(i));
 		}
+		Collections.reverse(sorted); //First in last out in terms of rendering, 
 		return sorted;
 	}
-	
+
 	/*
 	 * helper method for sortBySpan(ArrayList<String> unsorted. 
 	 * Takes a sorted ArrayList and the element to be added, placing the new element in the sorted ArrayList
@@ -254,25 +311,7 @@ public class Charts extends JFrame  implements SelectionChangeListener<XYCursor>
 		}
 		return addToMe;
 	}
-	
-	/*
-	 * Intended to be for calculating the span of a selected group of Contigs
-	 */
-	private double getSpan (ArrayList<Contig> selection)
-	{
-		double span = 0;
-		for (int i = 0; i < selection.size(); i ++)
-		{
-			span += selection.get(i).getLen();
-		}
-		return span;
-	}
-	
-	
-	/*
-	 * Helper method for getTopTaxa()
-	 * Adds taxa to sorted ArrayList<Stirng> of taxa based on the length of the ArrayList associated with said 
-	 */
+
 	private ArrayList<String> sortTaxa(String addMe,  ArrayList<String> sortedTaxa) 
 	{
 		boolean go = true;
@@ -299,6 +338,181 @@ public class Charts extends JFrame  implements SelectionChangeListener<XYCursor>
 		return sortedTaxa;
 	}
 
+	
+	/***************************************
+	*Display statistics for selection of contigs
+	*
+	***************************************/
+	
+	/*
+	 * Intended to be for calculating the span of a selected group of Contigs
+	 */
+	public int getSpan (ArrayList<Contig> selection)
+	{
+		int span = 0;
+		for (int i = 0; i < selection.size(); i ++)
+		{
+			span += selection.get(i).getLen();
+		}
+		return span;
+	}
+
+	public double getMeanLength (ArrayList<Contig> selection)
+	{
+		double total = 0;
+		for(int i = 0; i < selection.size(); i++)
+		{
+			total += selection.get(i).getLen();
+		}
+
+		return total/selection.size();
+	}
+	
+
+	public double getMedianLength(ArrayList<Contig> selection)
+	{
+		if(selection.size() == 0)
+			return -1.0;
+		
+		ArrayList<Integer> sorted = new ArrayList<Integer>(selection.size());
+		for(int i = 0; i < selection.size(); i ++)
+		{
+			sorted.add(selection.get(i).getLen());
+		}
+		Collections.sort(sorted);
+		for(int i = 0; i < sorted.size(); i ++)
+		{
+			System.out.println(sorted.get(i));
+		}
+		if(sorted.size() == 1)
+			return sorted.get(0)*1.0;
+		else if (sorted.size() == 2)
+			return (sorted.get(0) + sorted.get(1))/2.0;
+		else if(sorted.size() > 3)
+		{
+			if(sorted.size()%2 != 0)
+			{
+				int index = (sorted.size()/2) + 1;
+				return sorted.get(index)*1.0;
+			}
+			else
+			{
+				int index1 = (sorted.size()/2);
+				int index2 = index1 + 1;
+				return (sorted.get(index1) + sorted.get(index2))/2.0;
+			}
+		}
+		return -10; // check that All possible medians are caught
+	}
+	
+	public double getMeanGC(ArrayList<Contig> selection)
+	{
+		double total = 0;
+		for (int i = 0; i < selection.size(); i ++)
+		{
+			total += selection.get(i).getGC();
+		}
+		return total/selection.size();
+	}
+	
+	/*
+	 * Retrns the N50 of a selected group of Contigs.  If a contig bridges the rounded midpoint, it is included in the N50 calculation
+	 */
+	public int calculateN50(ArrayList<Contig> selection)
+	{
+		ArrayList<Integer> sorted = new ArrayList<Integer>(selection.size());
+		int n50 = 0;
+		int midPoint = (int)Math.round(getSpan(selection)/2.0); //calculates midpoint by getting total length of span/ 2 and truncates
+		for(int i = 0; i < selection.size(); i ++) // populate ArrayList of integer
+		{
+			sorted.add(selection.get(i).getLen());
+		}
+		Collections.sort(sorted);
+		Collections.reverse(sorted);
+		
+		for(int i = 0; i < sorted.size(); i ++)
+		{
+			if (n50 >= midPoint)
+				 break;
+			n50 += sorted.get(i);
+		}
+		return n50;
+	}
+	
+	private String [] [] separateByTaxa(ArrayList<Contig> selected) 
+	{
+		HashMap<String, ArrayList<Contig>> grouped = new HashMap<String, ArrayList<Contig>>();
+		HashMap<String, Integer> groupedSpan = new HashMap<String, Integer>();
+		String [] [] groupedSpanTotalsByTaxa;
+		for(int i = 0; i < selected.size(); i ++)
+		{
+			if(grouped.containsKey(selected.get(i).getTax()[taxaIndex]))//Key already exists in Map, default for phylum
+			{
+				ArrayList<Contig> temp = grouped.get((selected.get(i).getTax()[taxaIndex]));
+				temp.add(selected.get(i));
+				grouped.put(selected.get(i).getTax()[taxaIndex], temp);
+				groupedSpan.put(selected.get(i).getTax()[taxaIndex],groupedSpan.get(selected.get(i).getTax()[taxaIndex]) + selected.get(i).getLen());
+
+			}
+			else
+			{
+				ArrayList<Contig> temp = new ArrayList<Contig>();
+				temp.add(selected.get(i));
+				grouped.put(selected.get(i).getTax()[taxaIndex], temp);
+				groupedSpan.put(selected.get(i).getTax()[taxaIndex], selected.get(i).getLen());
+			}
+		}
+		groupedSpanTotalsByTaxa = new String [grouped.keySet().size()][2];
+		Iterator<String> itr = grouped.keySet().iterator();
+		int count = 0;
+		while(itr.hasNext())
+		{
+			String taxa = itr.next();
+			groupedSpanTotalsByTaxa[count][0] = taxa;
+			groupedSpanTotalsByTaxa[count][1] = groupedSpan.get(taxa).toString();
+			count ++;
+		}
+		return groupedSpanTotalsByTaxa;
+	}
+
+	private void statistics(ArrayList<Contig> selected)
+	{
+		int number = selected.size();
+		if(number > 0)
+		{
+			while(this.model.getRowCount() > 0)
+			{
+				this.model.removeRow(0);
+			}
+			
+			int n50 = calculateN50(selected);
+			double meanGC = getMeanGC(selected);
+			double medianLen = getMedianLength(selected);
+			double meanLen = getMeanLength(selected);
+			int span = getSpan(selected);
+			String selectedSpan = span + "/" + totalLength;
+			this.model.addRow(new Object[] {"Mean length: ", new Double(meanLen)});
+			this.model.addRow(new Object[] {"Median length: ", new Double(medianLen)});
+			this.model.addRow(new Object[] {"Mean GC: ", new Double(meanGC)});
+			this.model.addRow(new Object[] {"Span: ", new String(selectedSpan)});
+			this.model.addRow(new Object[] {"Number of contigs: ", new Integer(number)});
+			this.model.addRow(new Object[] {"N50 of selected: ", new Integer(n50)}); 
+			this.model.addRow(new Object[] {"", }); 
+			this.model.addRow(new Object[] {"Span breakdown: ", "Taxa/Selection"}); 
+			String[][] selectedContigByTaxa = separateByTaxa(selected);
+			for(int i = 0; i < selectedContigByTaxa.length; i ++)
+			{
+				this.model.addRow(new Object[] {selectedContigByTaxa[i][0], new String(selectedContigByTaxa[i][1]+"/"+span)}); 
+			}
+		}
+	}
+	
+	
+	/*
+	 * Helper method for getTopTaxa()
+	 * Adds taxa to sorted ArrayList<Stirng> of taxa based on the length of the ArrayList associated with said 
+	 */
+	
 	/*
 	 * Reads file passed in from JavaFX scene in Test.java
 	 * parses each line of the file to generate a Contig
@@ -312,11 +526,11 @@ public class Charts extends JFrame  implements SelectionChangeListener<XYCursor>
 	{
 		BufferedReader bufferedReader = null;
 		boolean correct = true;
-
 		try 
 		{
 			bufferedReader = new BufferedReader(new FileReader(file));
-			System.out.println(bufferedReader.readLine());
+			Object dummy = bufferedReader.readLine();
+
 			String text;
 			while ((text = bufferedReader.readLine()) != null) 
 			{
@@ -328,7 +542,8 @@ public class Charts extends JFrame  implements SelectionChangeListener<XYCursor>
 				else
 				{	
 					contigSet.add(addMe); //add Contig to Arraylist
-					String tax = addMe.getTax()[0];
+					String tax = addMe.getTax()[taxaIndex];
+					totalLength += addMe.getLen();
 					if(contigByTaxa.containsKey(tax))//Key already exists in Map, default for phylum
 					{
 						ArrayList<Contig> temp = contigByTaxa.get(tax);
@@ -373,7 +588,7 @@ public class Charts extends JFrame  implements SelectionChangeListener<XYCursor>
 
 		return correct;
 	}
-	
+
 	/*
 	 * Parses out Contrig from sinle line of text and replaces evalue "N/A" results with the user defined double
 	 * Parsing structure based on https://github.com/blaxterlab/blobology/tree/master/dev format as of 18/06/14
@@ -465,20 +680,25 @@ public class Charts extends JFrame  implements SelectionChangeListener<XYCursor>
 			this.model.removeRow(0);
 		}
 
-		XYZDatasetSelectionExtension ext = (XYZDatasetSelectionExtension)event.getSelectionExtension();
-	    DatasetIterator itr = ext.getSelectionIterator(true);
-
+		XYDatasetSelectionExtension ext = (XYDatasetSelectionExtension)event.getSelectionExtension();
+		DatasetIterator itr = ext.getSelectionIterator(true);
+		//XYPlot plot = (XYPlot) chart.getPlot();
+		
+		ArrayList<Contig> selected = new ArrayList<Contig>();
 		while(itr.hasNext())
 		{
-			System.out.println("has next");
 			XYCursor dc = (XYCursor)itr.next();
 			Comparable seriesKey = this.dataset.getSeriesKey(dc.series);
+			System.out.println("item" + dc.item);
 			Number x = this.dataset.getX(dc.series, dc.item);
 			Number y = this.dataset.getY(dc.series, dc.item);
-			Number z = this.dataset.getZ(dc.series, dc.item);
-			this.model.addRow(new Object[] {seriesKey, new Integer(dc.item), x, y, y});
+			ArrayList<Contig> taxa = contigByTaxa.get(seriesKey);
+			selected.add(taxa.get(dc.item));
 		}
+		long end = System.nanoTime();
+		statistics(selected);
 	}
+	
 
 }
 
