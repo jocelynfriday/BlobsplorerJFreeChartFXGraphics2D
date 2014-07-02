@@ -9,6 +9,7 @@ public class Contig
 	private double [] cov = new double[3];
 	private String [] tax = new String[4];
 	private double eValue;
+	private boolean visible;
 	
 	public Contig (String ID, int len, double gc2, double[] cov, String [] tax, double eVal)
 	{
@@ -18,6 +19,7 @@ public class Contig
 		this.cov = cov;
 		this.tax = tax;
 		this.eValue = eVal;
+		visible = true;
 	}
 	
 	public String getID()
@@ -50,9 +52,21 @@ public class Contig
 		return eValue;
 	}
 	
+	public boolean isVisible()
+	{
+		return visible;
+	}
+	
 	public void setCovAtPos(int i, double value)
 	{
 		cov[i] = value;
+	}
+	
+	public boolean setVisibility (boolean isVisible)
+	{
+		boolean temp = visible;
+		visible = isVisible; 
+		return temp;
 	}
 
 }

@@ -332,21 +332,13 @@ public class Test extends Application
 	private static void clear()
 	{
 		file = null;
-		
-		
 	}
 	
 
 	//*$* need to incorporate eValue
 	private static void setup(int taxaDisplayNumber,  double eValue)
-	{
-		
-	//	Stage graph = new Stage();
-		//File file = new File("/Users/jocelynfriday/Desktop/new_format.blobplot.txt");
-		//int taxaDisplayNumbner1 = 7;
-		//double eValue1 = 1.00;
-		
-		Charts scatter = new Charts(file, taxaDisplayNumber,eValue, "Hello" );
+	{	
+		Charts scatter = new Charts(file, taxaDisplayNumber,eValue, "Blobsplorer" );
 		scatter.pack();
 		WindowUtils.centerFrameOnScreen(scatter);
 		scatter.setVisible(true);
