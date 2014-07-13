@@ -1,30 +1,20 @@
 package org.jfree.chart.demo;
 //package org.jfree.chart.demo.selection;
 
-import java.awt.Font;
 import java.awt.geom.Rectangle2D;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.StringTokenizer;
+
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.swing.JFrame;
-import javax.swing.JPanel;
-import javax.swing.JTable;
-import javax.swing.table.DefaultTableModel;
+
 
 import javafx.application.Application;
-import javafx.embed.swing.SwingNode;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
@@ -36,36 +26,16 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.StackPane;
 //import javafx.scene.text.Text;
 import javafx.scene.text.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
-import org.jfree.chart.ChartFactory;
-import org.jfree.chart.ChartPanel;
+
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.axis.LogAxis;
-import org.jfree.chart.axis.NumberTickUnit;
-import org.jfree.chart.block.BlockBorder;
-import org.jfree.chart.panel.selectionhandler.EntitySelectionManager;
-import org.jfree.chart.panel.selectionhandler.FreePathSelectionHandler;
-import org.jfree.chart.panel.selectionhandler.MouseClickSelectionHandler;
-import org.jfree.chart.panel.selectionhandler.RegionSelectionHandler;
-import org.jfree.chart.plot.XYPlot;
-import org.jfree.chart.renderer.xy.XYBubbleRenderer;
+
 import org.jfree.chart.ui.WindowUtils;
-import org.jfree.data.extension.DatasetSelectionExtension;
-import org.jfree.data.extension.impl.DatasetExtensionManager;
-import org.jfree.data.extension.impl.XYCursor;
-import org.jfree.data.extension.impl.XYDatasetSelectionExtension;
-import org.jfree.data.general.Dataset;
-import org.jfree.data.general.SelectionChangeEvent;
-import org.jfree.data.general.SelectionChangeListener;
-import org.jfree.data.xy.DefaultXYZDataset;
-import org.jfree.data.xy.IntervalXYDataset;
-import org.jfree.data.xy.XYSeriesCollection;
-import org.jfree.data.xy.XYZDataset;
+
 import org.jfree.fx.FXGraphics2D;
 
 //import com.sun.xml.internal.bind.v2.schemagen.xmlschema.SimpleType;
@@ -76,9 +46,6 @@ import org.jfree.fx.FXGraphics2D;
 public class Test extends Application 
 {
 	private static File file;
-	private static int taxLevel = 0;
-	private static int covLevel = 0;
-	private static double defaultEValue = 1.0;
 	private static final Stage primaryStage = null;
 
 	public static class ChartCanvas extends Canvas
@@ -175,11 +142,11 @@ public class Test extends Application
 				});
 		grid.add(buttonLoad, 1, 1);
 
-		Label taxa = new Label("Taxa cutoff");
-		grid.add(taxa, 0, 2);
-		TextField taxaNumber = new TextField();
-		taxaNumber.setPromptText("No. of taxa displayed");
-		grid.add(taxaNumber, 1, 2);
+		Label cov = new Label("Default coverage");
+		grid.add(cov, 0, 2);
+		TextField covValue = new TextField();
+		covValue.setPromptText("Value if cov is 0");
+		grid.add(covValue, 1, 2);
 
 		Label eValue = new Label("Default EValue");
 		grid.add(eValue, 0, 3);
@@ -209,9 +176,9 @@ public class Test extends Application
 			public void handle(ActionEvent e)
 			{
 				boolean run = true;
-				String tax = taxaNumber.getText();
+				String cov = covValue.getText();
 				String eVal = eValueNumber.getText();
-				int taxNum = 0;
+				int covNum = 0;
 				double eValue = 1;
 				//check for if file populated memory
 				//*$* This might be taking time, check for a way to speed up
@@ -222,26 +189,26 @@ public class Test extends Application
 				}
 
 				//check if user entered valid taxa number
-				if(tax == null)
+				if(cov == null)
 				{
-					errorMessage.setText("Enter number of taxa");
+					errorMessage.setText("Enter default coverage");
 					run = false;
 				}
 				else
 				{
 					try
 					{
-						taxNum = Integer.parseInt(tax);
-						if (taxNum < 0)
+						covNum = Integer.parseInt(cov);
+						if (covNum == 0)
 						{
-							errorMessage.setText("Enter an integer greater than 0");
+							errorMessage.setText("Enter a number other than 0");
 							run = false;
 						}
 
 					}
 					catch(NumberFormatException nft)
 					{
-						errorMessage.setText("Enter an integer value (e.g. 1, 2, etc)");
+						errorMessage.setText("Enter a valid number (e.g. 1e-5, -8, etc)");
 						run = false;
 					}
 				}
@@ -255,24 +222,24 @@ public class Test extends Application
 				{
 					try
 					{
-						eValue = Double.parseDouble(tax);
-						if (!(eValue >= 0))
+						eValue = Double.parseDouble(cov);
+						if (eValue == 0)
 						{
-							errorMessage.setText("Enter an double >= 0");
+							errorMessage.setText("Enter a number other than 0");
 							run = false;
 						}
 
 					}
 					catch(NumberFormatException nft)
 					{
-						errorMessage.setText("Enter an double value (e.g. 1.0, 2.0, etc)");
+						errorMessage.setText("Enter a valid double (e.g. 1.0, 2.0, etc)");
 						run = false;
 					}
 				}
 
 				if(run)
 				{
-					setup(taxNum, eValue);
+					Test.setup(covNum, eValue);
 					//stage.close();
 				}
 
@@ -283,7 +250,7 @@ public class Test extends Application
 				{
 			public void handle (ActionEvent e)
 			{
-				taxaNumber.clear();
+				covValue.clear();
 				eValueNumber.clear();
 				clear();
 				errorMessage.setText(null);
@@ -336,13 +303,12 @@ public class Test extends Application
 	
 
 	//*$* need to incorporate eValue
-	private static void setup(int taxaDisplayNumber,  double eValue)
+	private static void setup(int covNum,  double eValue)
 	{	
-		Charts scatter = new Charts(file, taxaDisplayNumber,eValue, "Blobsplorer" );
+		Charts scatter = new Charts(file, covNum,eValue);
 		scatter.pack();
 		WindowUtils.centerFrameOnScreen(scatter);
 		scatter.setVisible(true);
-		//drawGraph(graph, scatter);
 	}
 
 	

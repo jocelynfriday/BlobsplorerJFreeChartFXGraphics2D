@@ -3,34 +3,57 @@ package org.jfree.chart.demo;
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.GridLayout;
+import java.awt.Label;
+import java.awt.Paint;
+import java.awt.TextField;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Hashtable;
 import java.util.Iterator;
-import java.util.List;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+
+
+
+
+
+
+
+
+
+
+
 import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSlider;
 import javax.swing.JSplitPane;
+import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
@@ -38,10 +61,10 @@ import javax.swing.border.TitledBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableColumnModel;
 
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
+import org.jfree.chart.ChartTheme;
 import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.AxisLocation;
@@ -50,13 +73,12 @@ import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.axis.NumberTickUnit;
 import org.jfree.chart.event.ChartChangeEvent;
 import org.jfree.chart.event.ChartChangeListener;
-import org.jfree.chart.panel.selectionhandler.EntitySelectionManager;
-import org.jfree.chart.panel.selectionhandler.FreePathSelectionHandler;
-import org.jfree.chart.panel.selectionhandler.MouseClickSelectionHandler;
-import org.jfree.chart.panel.selectionhandler.RectangularRegionSelectionHandler;
-import org.jfree.chart.panel.selectionhandler.RegionSelectionHandler;
-import org.jfree.chart.plot.CombinedDomainXYPlot;
-import org.jfree.chart.plot.CombinedRangeXYPlot;
+//import org.jfree.chart.panel.selectionhandler.EntitySelectionManager;
+//import org.jfree.chart.panel.selectionhandler.FreePathSelectionHandler;
+//import org.jfree.chart.panel.selectionhandler.MouseClickSelectionHandler;
+//import org.jfree.chart.panel.selectionhandler.RectangularRegionSelectionHandler;
+//import org.jfree.chart.panel.selectionhandler.RegionSelectionHandler;
+
 import org.jfree.chart.plot.Plot;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.ValueAxisPlot;
@@ -83,17 +105,14 @@ import org.jfree.data.extension.impl.XYDatasetSelectionExtension;
 import org.jfree.data.general.Dataset;
 import org.jfree.data.general.SelectionChangeEvent;
 import org.jfree.data.general.SelectionChangeListener;
-import org.jfree.data.statistics.HistogramDataset;
 import org.jfree.data.xy.DefaultTableXYDataset;
-import org.jfree.data.xy.DefaultXYZDataset;
 import org.jfree.data.xy.IntervalXYDataset;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
-import org.jfree.data.xy.XYZDataset;
 
 public class Charts extends ApplicationFrame{
-	static class BlobPanel extends DemoPanel implements ChangeListener, ChartChangeListener
+	static class BlobPanel extends DemoPanel implements ItemListener, ChangeListener, ChartChangeListener, KeyListener //, SelectionChangeListener<XYCursor>
 	{
 		//private XYDataset dataset;
 		private XYSeriesCollection dataset;
@@ -102,13 +121,16 @@ public class Charts extends ApplicationFrame{
 		private JFreeChart xSubChart;
 		private JSlider eValueJSlider;
 		private JSlider lengthJSlider;
+		private JSlider covJSlider;
 		private Range lastXRange;
 		private Range lastYRange;
 		private DefaultTableModel model;
 		private JTable table;
 
+
+		private static File file;
+		private static double defaultEValue;
 		private static ArrayList <Contig> contigSet = new ArrayList<Contig>();
-		private static int numberOfTaxaDisplayed;
 		private static int taxaIndex = 2;
 		private static int covLibraryIndex = 0; // which cov library to use //** needs to be added to UI
 		private static HashMap<String, ArrayList<Contig>> contigByTaxa = new HashMap<String, ArrayList<Contig>>();
@@ -116,32 +138,45 @@ public class Charts extends ApplicationFrame{
 		private static int totalLength = 0;
 		private static double maxEValue = 1.0;
 		private static int minContigLength = 0;
+		private static double defaultMinCov = 1E-5;
+		private static double minCov;
+		private static double maxCov = 0;
 		private static double minX = 0;
 		private static double maxX = 0;
 		private static double minY = 0;
 		private static double maxY = 0;
+		private static double minFoundEValue= 0;
 		private static final int numOfBuckets = 100;
+		private static String header = "";
+		private static String[] taxaNames;
+		private static String [] covLibraryNames;
+
 		private static ArrayList<String> taxaForDisplay;
 
-		public BlobPanel(File file, int taxLevel, double eValue, String title)
+		public BlobPanel(File file, int covLevel, double eValue)
 		{
 			super(new BorderLayout());
 			System.out.println("in blobPanel");
-			numberOfTaxaDisplayed = taxLevel;
-			readFile(file, eValue); // might add boolean check later
+			defaultMinCov= covLevel;
+			this.file = file;
+			this.defaultEValue = eValue;
+			readFile(); // might add boolean check later
 			getTaxaForDisplay();
-			
+
+
 			ChartPanel chartPanel = (ChartPanel) createMainPanel();
-			chartPanel.setPreferredSize(new java.awt.Dimension(1000, 540));
+			chartPanel.setPreferredSize(new java.awt.Dimension(700, 500));
 			add(chartPanel);
 
+
+
 			JPanel minEvaluePanel = new JPanel(new BorderLayout());			
-			DefaultTableXYDataset yDataset = createYDataset(taxaForDisplay);
+			DefaultTableXYDataset yDataset = createYDataset();
 			//this.ySubChart = ChartFactory.createXYStackedBarChart("Domain count", "COV", "Count", yDataset, PlotOrientation.HORIZONTAL, false, false, false);
 			StackedXYBarRenderer stackedR = new StackedXYBarRenderer();
-			 stackedR.setBarPainter(new StandardXYBarPainter());
-			 stackedR.setDrawBarOutline(false);
-			 stackedR.setShadowVisible(false);
+			stackedR.setBarPainter(new StandardXYBarPainter());
+			stackedR.setDrawBarOutline(false);
+			stackedR.setShadowVisible(false);
 			LogAxis yDomainAxis = new LogAxis("COV"); 
 			//yRangeAxis.setRange(-1, 1E5);
 			NumberAxis yRange = new NumberAxis("Count");
@@ -152,29 +187,25 @@ public class Charts extends ApplicationFrame{
 			plot.getDomainAxis().setUpperMargin(0.0);
 			plot.setDomainAxisLocation(AxisLocation.BOTTOM_OR_RIGHT);
 			plot.setOrientation(PlotOrientation.HORIZONTAL);
-			this.ySubChart = new JFreeChart("Range count", plot);
-
+			this.ySubChart = new JFreeChart(plot);
+			this.ySubChart.removeLegend();
 			ChartPanel ySubChartPanel = new ChartPanel(ySubChart);
 			ySubChartPanel.setMinimumDrawWidth(0);
 			ySubChartPanel.setMinimumDrawHeight(0);
 
-			ySubChartPanel.setPreferredSize(new Dimension (200, 150));
-			this.eValueJSlider = new JSlider(0, 100, 100);
-			this.eValueJSlider.addChangeListener(this);
-			this.eValueJSlider.setOrientation(JSlider.VERTICAL);
-			
+			ySubChartPanel.setPreferredSize(new Dimension (200, 200));
 
 			minEvaluePanel.add(ySubChartPanel);
-			minEvaluePanel.add(this.eValueJSlider, BorderLayout.WEST);
+			//minEvaluePanel.setPreferredSize(new Dimension(200,250));
 			System.out.println("***FINISHED Y Panel");
-			
+
 			//Add X dataset <- GC
 			JPanel minLengthPanel = new JPanel(new BorderLayout());
-			DefaultTableXYDataset xDataset = createXDataset(taxaForDisplay);
+			DefaultTableXYDataset xDataset = createXDataset();
 			StackedXYBarRenderer stackedD = new StackedXYBarRenderer(.995);
 			stackedD.setBarPainter(new StandardXYBarPainter());
 			stackedD.setDrawBarOutline(true);
-			 stackedD.setShadowVisible(false);
+			stackedD.setShadowVisible(false);
 			NumberAxis xRangeAxis = new NumberAxis("Count"); 
 			//xRangeAxis.setRange(-1, 1E5);
 			xRangeAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
@@ -182,31 +213,264 @@ public class Charts extends ApplicationFrame{
 			domainAxis.setRange(0.0, 1.0);
 			XYPlot plot1 = new XYPlot(xDataset, domainAxis, xRangeAxis,stackedD);
 			plot1.setOrientation(PlotOrientation.VERTICAL);
-			//plot1.getDomainAxis().setLowerMargin(0.0);
-			//plot1.getDomainAxis().setUpperMargin(0.0);
+			plot1.getDomainAxis().setLowerMargin(0.0);
+			plot1.getDomainAxis().setUpperMargin(0.0);
 			plot1.setDomainAxisLocation(AxisLocation.BOTTOM_OR_RIGHT);
-			this.xSubChart = new JFreeChart("Domain count", plot1);
+			this.xSubChart = new JFreeChart(plot1);
+			this.xSubChart.removeLegend();
 
 			ChartPanel lengthPanel = new ChartPanel(xSubChart);
 			lengthPanel.setMinimumDrawWidth(0);
 			lengthPanel.setMinimumDrawHeight(0);
-			lengthPanel.setPreferredSize(new Dimension(200,150));
+			lengthPanel.setPreferredSize(new Dimension(200,200));
+
+
+			XYItemRenderer main = ((XYPlot) chartPanel.getChart().getPlot()).getRenderer();
+
 
 			//panel for layout
-			JPanel blank = new JPanel();
-			blank.setPreferredSize(new Dimension(200,10));
-			lengthPanel.add(blank, BorderLayout.EAST);
+			JPanel legend = new JPanel();
+			legend.setPreferredSize(new Dimension(200,10));
+			minLengthPanel.add(legend, BorderLayout.EAST);
 
-			this.lengthJSlider = new JSlider(0, 20000, 0);
-			this.lengthJSlider.setBorder(BorderFactory.createEmptyBorder(0,0,0,200));
-			this.lengthJSlider.addChangeListener(this);
 			minLengthPanel.add(lengthPanel);
-			minLengthPanel.add(lengthJSlider, BorderLayout.NORTH);
+
 			add(minEvaluePanel, BorderLayout.EAST);
-			add(minLengthPanel, BorderLayout.SOUTH);
+			add(minLengthPanel, BorderLayout.NORTH);
 			this.mainChart.setNotify(true);
 			System.out.println("***FINISHED Blob");
+			createTabbedControl();
 		}
+
+
+		public void createTabbedControl()
+		{
+			JFrame controlFrame = new JFrame("Control Panel");
+			controlFrame.setSize(800, 200);
+			JTabbedPane control = new JTabbedPane();
+			control.addTab("Stats", createStatsPanel());
+			control.addTab("Taxonomy", createTaxonomyPanel());
+			control.addTab("Filters", createFilterPanel());
+			control.addTab("Export", createExportPanel());
+			controlFrame.add(control);
+			controlFrame.pack();
+			controlFrame.setVisible(true);
+		}
+
+
+
+
+		private JPanel createStatsPanel()
+		{
+			JPanel statsPanel = new JPanel(new BorderLayout());
+			DefaultTableModel stats = new DefaultTableModel(new String [] {"Statistic", "Value"}, 0);
+			JTable statsTable = new JTable(stats);
+			statsTable.setPreferredSize(new Dimension(300,300));
+			statsPanel.setBorder(BorderFactory.createCompoundBorder(new TitledBorder("Visible contigs: "), new EmptyBorder(4,4,4,4)));
+			statsPanel.add(statsTable, BorderLayout.CENTER);
+			statistics(contigSet, stats);
+			return statsPanel;
+		}
+
+		private JPanel createTaxonomyPanel()
+		{
+			JPanel taxPanel = new JPanel();
+			taxPanel.setLayout(new BoxLayout(taxPanel, BoxLayout.Y_AXIS));
+			JPanel titlePanel = new JPanel();
+			Label title = new Label("Taxa as ordereed from largest to smallest spans");
+			titlePanel.add(title);
+			taxPanel.add(titlePanel);
+
+			JPanel checkBoxPanel = new JPanel();
+			checkBoxPanel.setLayout(new BoxLayout(checkBoxPanel, BoxLayout.Y_AXIS));
+			for(int i = taxaForDisplay.size()-1; i >= 0; i --)
+			{
+				JCheckBox box = new JCheckBox(taxaForDisplay.get(i), true);
+				box.setActionCommand(taxaForDisplay.get(i));
+				box.addItemListener(this);
+				checkBoxPanel.add(box);
+			}
+			taxPanel.add(checkBoxPanel);
+
+			return taxPanel;
+		}
+
+
+		public void itemStateChanged(ItemEvent ie)
+		{
+			int series = -1;
+			for(int i = 0; i < taxaForDisplay.size(); i ++)
+			{
+				//if(ie.getActionCommand().equals(taxaForDisplay.get(i)))
+				{
+
+				}
+			}
+		}
+
+		private JPanel createFilterPanel()
+		{
+			JPanel filterPanel = new JPanel();
+			filterPanel.setLayout(new BoxLayout(filterPanel, BoxLayout.Y_AXIS));
+			JPanel length = new JPanel();
+			Label lengthSliderLabel = new Label ("Minimum contig length:");
+			length.add(lengthSliderLabel);
+			this.lengthJSlider = new JSlider(0, 20000, 0);
+			this.lengthJSlider.setMajorTickSpacing(1000);
+			this.lengthJSlider.setMinorTickSpacing(500);
+			this.lengthJSlider.setPaintTicks(true);
+			this.lengthJSlider.setPaintLabels(true);
+			this.lengthJSlider.setPreferredSize(new Dimension (800, 80));
+			length.add(this.lengthJSlider);
+			filterPanel.add(length, BorderLayout.CENTER);
+
+			JPanel eValue = new JPanel();
+			Label eValueSliderLabel = new Label ("Maximum E-Value:");
+			this.eValueJSlider = new JSlider(-100, 0, 0);
+			this.eValueJSlider.setMajorTickSpacing(10);
+			this.eValueJSlider.setMinorTickSpacing(1);
+			this.eValueJSlider.setPaintTicks(true);
+			this.eValueJSlider.setPaintLabels(true);
+			this.eValueJSlider.setPreferredSize(new Dimension(800, 80));
+			eValue.add(eValueSliderLabel);
+			eValue.add(this.eValueJSlider);
+			filterPanel.add(eValue, BorderLayout.CENTER);
+
+			JPanel covPanel = new JPanel();
+			Label covSliderLabel = new Label ("Minimum coverage level:");
+			this.covJSlider = new JSlider ((int)Math.round(defaultMinCov), (int)Math.round(maxCov), (int)Math.round(defaultMinCov));
+			this.covJSlider.setMajorTickSpacing(1000);
+			this.covJSlider.setMinorTickSpacing(500);
+			this.covJSlider.setPaintTicks(true);
+			this.covJSlider.setPaintLabels(true);
+			this.covJSlider.setPreferredSize(new Dimension(800, 80));
+			covPanel.add(covSliderLabel);
+			covPanel.add(covJSlider);
+			filterPanel.add(covPanel, BorderLayout.CENTER);
+
+
+			JPanel pullDown = new JPanel();
+			JLabel taxPullDownLabel = new JLabel("Select taxa level: ");
+			pullDown.add(taxPullDownLabel);
+
+			DefaultComboBoxModel<String> taxModel = new DefaultComboBoxModel<String>();
+			for(int i = 0; i < taxaNames.length; i ++)
+			{
+				taxModel.addElement(taxaNames[i]);
+			}
+			final JComboBox<String> taxComboBox = new JComboBox<String>(taxModel);
+			pullDown.add(taxComboBox);
+
+			JLabel covPullDownLabel = new JLabel("Select coverage library:");
+			pullDown.add(covPullDownLabel);
+
+			DefaultComboBoxModel<String> covModel = new DefaultComboBoxModel<String>();
+			for(int i = 0; i < covLibraryNames.length; i ++)
+			{
+				covModel.addElement(covLibraryNames[i]);
+			}
+			final JComboBox<String> covComboBox = new JComboBox<String>(covModel);
+			pullDown.add(covComboBox);
+
+			filterPanel.add(pullDown);
+
+			JButton submit = new JButton("Submit");
+			submit.setMnemonic(KeyEvent.VK_ENTER);
+			submit.addActionListener(new ActionListener()
+			{
+				public void actionPerformed(ActionEvent e)
+				{
+					System.out.println("action performed ");
+					if(taxComboBox.getSelectedIndex() != taxaIndex)
+					{
+						taxaIndex = taxComboBox.getSelectedIndex();
+						updateClassifications();
+					}
+					if(covComboBox.getSelectedIndex() != covLibraryIndex)
+					{
+						covLibraryIndex = covComboBox.getSelectedIndex();
+					}
+					
+					update();
+				}
+			});
+
+			filterPanel.add(submit);
+			return filterPanel;
+		}
+
+		private void updateClassifications()
+		{
+
+			contigByTaxa.clear();
+			taxLevelSpan.clear();
+			ArrayList<Contig> temp ;
+
+			for(int i = 0; i < contigSet.size(); i ++)
+			{
+
+				if(contigByTaxa.containsKey(contigSet.get(i).getTax()[taxaIndex]))
+				{
+					temp = contigByTaxa.get(contigSet.get(i).getTax()[taxaIndex]);
+					temp.add(contigSet.get(i));
+					contigByTaxa.put(contigSet.get(i).getTax()[taxaIndex], temp);
+					Integer current = taxLevelSpan.get(contigSet.get(i).getTax()[taxaIndex]);
+					current += contigSet.get(i).getLen();
+					taxLevelSpan.put(contigSet.get(i).getTax()[taxaIndex], current);
+				}
+
+				else
+				{
+					temp = new ArrayList<Contig>();
+					temp.add(contigSet.get(i));
+					contigByTaxa.put(contigSet.get(i).getTax()[taxaIndex], temp);
+					taxLevelSpan.put(contigSet.get(i).getTax()[taxaIndex], contigSet.get(i).getLen());
+				}
+			}
+		}
+
+		private JPanel createExportPanel() 
+		{
+			JPanel exportPanel = new JPanel();
+			exportPanel.setLayout(new BoxLayout(exportPanel, BoxLayout.Y_AXIS));
+			JPanel file = new JPanel();
+			Label fileNameLabel = new Label ("Export File Name:");
+			TextField fileField = new TextField(20);
+			file.add(fileNameLabel);
+			file.add(fileField);
+			exportPanel.add(file);
+
+			JPanel buttonPanel = new JPanel();
+
+			JButton reload = new JButton("Restart");
+			reload.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e)
+				{
+					readFile();					
+				}
+			});
+
+			buttonPanel.add(reload);
+
+			JButton export = new JButton("Export");
+			export.addActionListener(new ActionListener()
+			{
+				public void actionPerformed(ActionEvent e)
+				{
+					System.out.println("action performed in submit");
+
+					//printToFile();
+				}
+			});
+
+			buttonPanel.add(export);
+			exportPanel.add(buttonPanel);
+
+			return exportPanel;
+		}
+
 
 		public JPanel createMainPanel()
 		{
@@ -218,7 +482,12 @@ public class Charts extends ApplicationFrame{
 			panel.setMouseWheelEnabled(true);
 			return panel;
 		}
-		
+
+		public void printToFile(File file)
+		{
+
+		}
+
 		public void chartChanged(ChartChangeEvent event)
 		{
 			System.out.println("in chartChanged");
@@ -234,51 +503,52 @@ public class Charts extends ApplicationFrame{
 				this.lastYRange = plot.getRangeAxis().getRange();
 				XYPlot plotY = (XYPlot) this.ySubChart.getPlot();
 				plotY.getDomainAxis().setRange(this.lastYRange);
-				
+
 			}
 		}
-		
+
 		private JFreeChart createChart(XYDataset dataset)
 		{
 			System.out.println("In createChart");
 			this.dataset = createDataset();
-			JFreeChart chart = ChartFactory.createScatterPlot("BlobSplorer Selection Demo", "GC", "COV", this.dataset);
-		
+			JFreeChart chart = ChartFactory.createScatterPlot("", "GC", "COV", this.dataset);
+
 			XYPlot plot = (XYPlot) chart.getPlot();
 			plot.setDomainPannable(true);
 			plot.setRangePannable(true);
 			NumberAxis xAxis = new NumberAxis("GC");
 			xAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
-			xAxis.setLowerMargin(0.0);
-			xAxis.setUpperMargin(0.0);
+			//	xAxis.setLowerMargin(0.0);
+			//	xAxis.setUpperMargin(0.0);
 			xAxis.setRange(0.0, 1.0);
 			plot.setDomainAxis(xAxis);
 			LogAxis yAxis = new LogAxis("COV");
 			yAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
-			yAxis.setLowerMargin(0.0);
-			yAxis.setUpperMargin(0.0);
+			//yAxis.setLowerMargin(0.0);
+			//	yAxis.setUpperMargin(0.0);
 			plot.setRangeAxis(yAxis);
 			return chart;
 		}
 
-		public void stateChanged (ChangeEvent e)
+		public void update ()
 		{
-			System.out.println("In stateChanged");
-			if(e.getSource() == this.lengthJSlider)
-			{
-				minContigLength = this.lengthJSlider.getValue() - this.lengthJSlider.getMinimum();
-				System.out.println("minContigLength "+ minContigLength);
-			}
-			else if (e.getSource() == this.eValueJSlider)
-			{
-				maxEValue = this.eValueJSlider.getValue() - this.eValueJSlider.getMinimum();
-				System.out.println("maxEValue " + maxEValue);
-			}
-			updateVisible();
+			System.out.println("Update");
+			minContigLength = this.lengthJSlider.getValue();
+
+			double exponent = this.eValueJSlider.getValue();
+			maxEValue = 1* Math.pow(10,-exponent);
+			minCov = this.covJSlider.getValue();
+
+			minCov = this.covJSlider.getValue();
+			updateDataset();
 			getTaxaForDisplay();
-			XYSeriesCollection newData = createDataset();
-			((XYPlot) this.mainChart.getPlot()).setDataset(newData);
-			
+			XYSeriesCollection newScatterData = createDataset();
+			((XYPlot) this.mainChart.getPlot()).setDataset(newScatterData);
+			DefaultTableXYDataset newXDataset = createXDataset();
+			((XYPlot) this.xSubChart.getPlot()).setDataset(newXDataset);
+			DefaultTableXYDataset newYDataset = createYDataset();
+			((XYPlot) this.ySubChart.getPlot()).setDataset(newYDataset);
+
 		}
 
 		private static void getTaxaForDisplay()
@@ -324,7 +594,7 @@ public class Charts extends ApplicationFrame{
 			return chart;
 
 		}
-		private static DefaultTableXYDataset createYDataset(ArrayList<String> taxaForDisplay)
+		private static DefaultTableXYDataset createYDataset()
 		{
 			System.out.println("in createYDataset");
 			DefaultTableXYDataset dataset = new DefaultTableXYDataset();
@@ -347,7 +617,7 @@ public class Charts extends ApplicationFrame{
 
 		}
 
-		private static DefaultTableXYDataset createXDataset(ArrayList<String> taxaForDisplay)
+		private static DefaultTableXYDataset createXDataset()
 		{
 			System.out.println("In createXDataset");
 			DefaultTableXYDataset dataset = new DefaultTableXYDataset();
@@ -381,17 +651,7 @@ public class Charts extends ApplicationFrame{
 				String key = itr.next();
 				topTaxa = sortTaxa(key,topTaxa);
 			}
-
-			if (numberOfTaxaDisplayed >= topTaxa.size()) //size of sorted array is less than max number of listed taxa?
-			{
-				return topTaxa; 
-			}
-			else
-			{
-				List<String> truncated = topTaxa.subList(0, numberOfTaxaDisplayed);
-				return new ArrayList<String>(truncated);
-			}
-
+			return topTaxa; 
 		}
 
 		/*
@@ -581,7 +841,7 @@ public class Charts extends ApplicationFrame{
 			String [] [] groupedSpanTotalsByTaxa;
 			for(int i = 0; i < selected.size(); i ++)
 			{
-				if(grouped.containsKey(selected.get(i).getTax()[taxaIndex]))//Key already exists in Map, default for phylum
+				if(grouped.containsKey(selected.get(i).getTax()[taxaIndex]))//Key already exists in Map
 				{
 					ArrayList<Contig> temp = grouped.get((selected.get(i).getTax()[taxaIndex]));
 					temp.add(selected.get(i));
@@ -610,115 +870,141 @@ public class Charts extends ApplicationFrame{
 			return groupedSpanTotalsByTaxa;
 		}
 
-		private void statistics(ArrayList<Contig> selected)
+		private void statistics(ArrayList<Contig> selected, DefaultTableModel display)
 		{
 			System.out.println("in statistics");
 			int number = selected.size();
-			if(number > 0)
+			while(display.getRowCount() > 0)
 			{
-				while(this.model.getRowCount() > 0)
-				{
-					this.model.removeRow(0);
-				}
-
-				int n50 = calculateN50(selected);
-				double meanGC = getMeanGC(selected);
-				double medianLen = getMedianLength(selected);
-				double meanLen = getMeanLength(selected);
-				int span = getSpan(selected);
-				String selectedSpan = span + "/" + totalLength;
-				this.model.addRow(new Object[] {"Mean length: ", new Double(meanLen)});
-				this.model.addRow(new Object[] {"Median length: ", new Double(medianLen)});
-				this.model.addRow(new Object[] {"Mean GC: ", new Double(meanGC)});
-				this.model.addRow(new Object[] {"Span: ", new String(selectedSpan)});
-				this.model.addRow(new Object[] {"Number of contigs: ", new Integer(number)});
-				this.model.addRow(new Object[] {"N50 of selected: ", new Integer(n50)}); 
-				this.model.addRow(new Object[] {"", }); 
-				this.model.addRow(new Object[] {"Span breakdown: ", "Taxa/Selection"}); 
-				String[][] selectedContigByTaxa = separateByTaxa(selected);
-				for(int i = 0; i < selectedContigByTaxa.length; i ++)
-				{
-					this.model.addRow(new Object[] {selectedContigByTaxa[i][0], new String(selectedContigByTaxa[i][1]+"/"+span)}); 
-				}
+				display.removeRow(0);
 			}
+
+
+			int n50 = calculateN50(selected);
+			double meanGC = getMeanGC(selected);
+			double medianLen = getMedianLength(selected);
+			double meanLen = getMeanLength(selected);
+			int span = getSpan(selected);
+			String selectedSpan = Integer.toString(span) + "/" + Integer.toString(totalLength);
+			display.addRow(new Object[] {"Mean length: ", new Double(meanLen)});
+			display.addRow(new Object[] {"Median length: ", new Double(medianLen)});
+			display.addRow(new Object[] {"Mean GC: ", new Double(meanGC)});
+			display.addRow(new Object[] {"Span: ", selectedSpan});
+			display.addRow(new Object[] {"Number of contigs: ", new Integer(number)});
+			display.addRow(new Object[] {"N50: ", new Integer(n50)}); 
+			display.addRow(new Object[] {"", }); 
+			display.addRow(new Object[] {"Span breakdown: ", "Taxa/Selection"}); 
+
+			String[][] selectedContigByTaxa = separateByTaxa(selected);
+			for(int i = 0; i < selectedContigByTaxa.length; i ++)
+			{
+				display.addRow(new Object[] {selectedContigByTaxa[i][0], new String(selectedContigByTaxa[i][1]+"/"+span)}); 
+			}
+
+
 		}
-		
-		private static void updateVisible()
+
+		private static void updateDataset()
 		{
 			System.out.println("in updateVisible");
-			boolean changedLength, changedEvalue;
+			boolean changedLength;
+			boolean changedCov;
 			for(int i = 0; i < contigSet.size(); i ++)
 			{
 				//Update visibility based on contig length
 				if (contigSet.get(i).getLen() < minContigLength) // contig below min lenght to be displayed
 				{
-					 changedLength = contigSet.get(i).setVisibility(false);
-					 if(changedLength) //if visibility goes from visible to hidden, indicate positive removal
-					 {
-						 remove (contigSet.get(i));
-					 }
+					changedLength = contigSet.get(i).setVisibility(false);
+					if(changedLength) //if visibility goes from visible to hidden, indicate positive removal
+					{
+						remove (contigSet.get(i));
+					}
 				}
 				else
 				{
 					changedLength = contigSet.get(i).setVisibility(true);
 					if(!changedLength) //Contig made visible from change
 					{
-						add(contigSet.get(i));
+						add(contigSet.get(i), contigSet.get(i).getTax()[taxaIndex]);
 					}
 				}
-				
-				//update visibility based on E-Value cutoff 
+
+				//update annotation based on E-Value cutoff 
+				//If contig's eValue is above eValue threshold, remove from it's current location and add to not annotated
+				String taxa = "Not annotated"; 
 				if(contigSet.get(i).getEValue() > maxEValue)
 				{
-					 changedEvalue = contigSet.get(i).setVisibility(false); //returns true if contig used to be visible and false otherwise
-					 if(changedEvalue)
-						 remove(contigSet.get(i));
+
+					if (!contigSet.get(i).getTax()[taxaIndex].equals(taxa)) // only moves contig if it is currently annotated 
+					{
+
+						remove(contigSet.get(i));
+						add(contigSet.get(i), taxa);
+						contigSet.get(i).setIsNotAnnotated(true);
+					}
+				}
+				else //return to original taxa
+				{
+					if(contigSet.get(i).getIsNotAnnotated())
+					{
+						remove(contigSet.get(i));
+						add(contigSet.get(i), contigSet.get(i).getTax()[taxaIndex]);
+						contigSet.get(i).setIsNotAnnotated(false);
+					}
+				}
+
+				if(contigSet.get(i).getCov()[covLibraryIndex] < minCov)
+				{
+					changedCov = contigSet.get(i).setVisibility(false);
+					if(!changedCov )
+					{
+						remove(contigSet.get(i));
+					}
 				}
 				else
 				{
-					changedEvalue = contigSet.get(i).setVisibility(true);
-					if(!changedEvalue)
-						add(contigSet.get(i));
+					changedCov = contigSet.get(i).setVisibility(true);
+					if(changedCov)
+					{
+						add(contigSet.get(i), contigSet.get(i).getTax()[taxaIndex]);
+					}
 				}
-				
 			}
 		}
-		
-		private static void add(Contig add)
+
+		private static void add(Contig add, String taxa)
 		{
 			System.out.println("in add");
-			 //update span calculation
-			String taxa = add.getTax()[taxaIndex];
-			 Integer updated = taxLevelSpan.get(taxa) + add.getLen();
-			 taxLevelSpan.put(taxa, updated);
-			 //add contig to contigByTaxa
-			 ArrayList<Contig> temp = contigByTaxa.get(taxa);
-			 temp.add(add);
-			 contigByTaxa.put(taxa, temp);
-		}
-		
-		private static void remove(Contig remove)
-		{
-			System.out.println("in remove");
-			 String taxa = remove.getTax()[taxaIndex];
-			 //Update taxLevelSpan to remove length of contig
-			 Integer updated = taxLevelSpan.get(taxa) - remove.getLen();
-			 taxLevelSpan.put(taxa, updated);
-			 //loop through contigs associated to taxa and remove contig from hashMap
-			 for(int j = 0; j < contigByTaxa.get(taxa).size(); j++)
-			 {
-				 if (contigByTaxa.get(taxa).get(j).getID().equals(remove.getID())) //based on assumption that contig IDs are unique
-				 {
-					 contigByTaxa.get(taxa).remove(j); // removes element from ArrayList associated with taxa key
-					 break;
-				 }
-			 }
+			//update span calculation
+			add.setTaxaAtPosition(taxa, taxaIndex);
+			Integer updated = taxLevelSpan.get(taxa) + add.getLen();
+			taxLevelSpan.put(taxa, updated);
+			//add contig to contigByTaxa
+			ArrayList<Contig> temp = contigByTaxa.get(taxa);
+			temp.add(add);
+			contigByTaxa.put(taxa, temp);
 		}
 
 		/*
-		 * Helper method for getTopTaxa()
-		 * Adds taxa to sorted ArrayList<Stirng> of taxa based on the length of the ArrayList associated with said 
+		 * @param
 		 */
+		private static void remove(Contig remove)
+		{
+			System.out.println("in remove");
+			//remove.setTaxaAtPosition(taxa, taxaIndex);
+			//Update taxLevelSpan to remove length of contig
+			Integer updated = taxLevelSpan.get(remove.getTax()[taxaIndex]) - remove.getLen();
+			taxLevelSpan.put(remove.getTax()[taxaIndex], updated);
+			//loop through contigs associated to taxa and remove contig from hashMap
+			for(int j = 0; j < contigByTaxa.get(remove.getTax()[taxaIndex]).size(); j++)
+			{
+				if (contigByTaxa.get(remove.getTax()[taxaIndex]).get(j).getID().equals(remove.getID())) //based on assumption that contig IDs are unique
+				{
+					contigByTaxa.get(remove.getTax()[taxaIndex]).remove(j); // removes element from ArrayList associated with taxa key
+					return;
+				}
+			}
+		}
 
 		/*
 		 * Reads file passed in from JavaFX scene in Test.java
@@ -729,7 +1015,7 @@ public class Charts extends ApplicationFrame{
 		 * Builds HashMap <String, Integer> taxLevelSpan, where the span of each taxa is calculated 
 		 * Returns false if error occures
 		 */
-		public static boolean readFile(File file, double eValue)
+		public static boolean readFile()
 		{
 			System.out.println("in readfile");
 			BufferedReader bufferedReader = null;
@@ -737,12 +1023,12 @@ public class Charts extends ApplicationFrame{
 			try 
 			{
 				bufferedReader = new BufferedReader(new FileReader(file));
-				Object dummy = bufferedReader.readLine();
+				header = bufferedReader.readLine();
 
 				String text;
 				while ((text = bufferedReader.readLine()) != null) 
 				{
-					Contig addMe = parseContig(text, eValue);
+					Contig addMe = parseContig(text, defaultEValue);
 					if (addMe == null)
 					{
 						System.out.println("Unable to parseContig");
@@ -752,6 +1038,16 @@ public class Charts extends ApplicationFrame{
 						contigSet.add(addMe); //add Contig to Arraylist
 						String tax = addMe.getTax()[taxaIndex];
 						totalLength += addMe.getLen();
+						//find smallest evalue in data
+						if(minFoundEValue > addMe.getEValue())
+						{
+							minFoundEValue= addMe.getEValue();
+						}
+
+						if(maxCov < addMe.getCov()[covLibraryIndex])
+						{
+							maxCov = addMe.getCov()[covLibraryIndex];
+						}
 						if(contigByTaxa.containsKey(tax))//Key already exists in Map, default for phylum
 						{
 							ArrayList<Contig> temp = contigByTaxa.get(tax);
@@ -801,7 +1097,7 @@ public class Charts extends ApplicationFrame{
 		 * Parses out Contrig from sinle line of text and replaces evalue "N/A" results with the user defined double
 		 * Parsing structure based on https://github.com/blaxterlab/blobology/tree/master/dev format as of 18/06/14
 		 */
-		private static Contig parseContig(String newEntry, double eValue2)
+		private static Contig parseContig(String newEntry, double userDefinedEValue)
 		{
 			String id;
 			int len;
@@ -827,7 +1123,7 @@ public class Charts extends ApplicationFrame{
 			covString = st.nextToken();
 			covST = new StringTokenizer(covString, ";");
 			double [] cov = new double [covST.countTokens()];
-			String [] tax = new String [4];
+			covLibraryNames = new String [covST.countTokens()];
 			while(covST.hasMoreTokens())
 			{
 				tempString = covST.nextToken();
@@ -835,6 +1131,7 @@ public class Charts extends ApplicationFrame{
 				if(parse.countTokens() % 2 == 0  && parse.countTokens() != 0)
 				{
 					key = parse.nextToken();
+					covLibraryNames[count] = key;
 					value = Double.parseDouble(parse.nextToken().replace(";",""));
 					cov[count] = value;
 					count ++;
@@ -847,6 +1144,8 @@ public class Charts extends ApplicationFrame{
 			}
 			taxString = st.nextToken();
 			taxST = new StringTokenizer(taxString, ";");
+			String [] tax = new String [taxST.countTokens()];
+			taxaNames = new String [taxST.countTokens()];
 			String keyValue;
 			while(taxST.hasMoreTokens())
 			{
@@ -855,6 +1154,7 @@ public class Charts extends ApplicationFrame{
 				if(parse.countTokens() % 2 == 0)
 				{
 					key = parse.nextToken();
+					taxaNames[taxCount] = key;
 					keyValue = parse.nextToken().replace(";","");
 					tax[taxCount] = keyValue;
 					taxCount ++;
@@ -867,15 +1167,17 @@ public class Charts extends ApplicationFrame{
 			}
 			temp = st.nextToken();
 			if (temp.contains("N/A"))
-				eValue = eValue2;
+				eValue = userDefinedEValue;
 			else
+			{
 				eValue = Double.parseDouble(temp);
+			}
 
 			contigToAdd = new Contig(id, len, gc, cov, tax, eValue);
 
 			return contigToAdd;
 		}
-		
+
 		private static double [] segregateByBucket(ArrayList<Contig> series, int numBins, double splitFactor, int category)
 		{
 			System.out.println("in segregateByBucket");
@@ -906,8 +1208,8 @@ public class Charts extends ApplicationFrame{
 			}
 			return collection;
 		}
-		
-	
+
+
 		private static XYSeriesCollection createDataset() 
 		{
 			System.out.println("in createDataset");
@@ -925,10 +1227,10 @@ public class Charts extends ApplicationFrame{
 				//len = new double [taxaSet.size()];
 				for(int j = 0; j < taxaSet.size(); j ++)
 				{	
-					//as 0 cannot be displayed on log scale, set libraries where coverage is 0 to small value
+					//as 0 cannot be displayed on log scale, set libraries where coverage is 0 to minCov until
 					if ((double)taxaSet.get(j).getCov()[covLibraryIndex] == 0)
 					{
-						taxaSet.get(j).setCovAtPos(covLibraryIndex, 1E-5);
+						taxaSet.get(j).setCovAtPos(covLibraryIndex, defaultMinCov);
 					}
 
 					series.add(taxaSet.get(j).getGC(), taxaSet.get(j).getCov()[covLibraryIndex]);
@@ -951,22 +1253,63 @@ public class Charts extends ApplicationFrame{
 		}
 
 
+		@Override
+		public void keyTyped(KeyEvent e) 
+		{
+			System.out.println("key typed");
+			if(e.getKeyCode() == KeyEvent.VK_ENTER)
+				update();
+		}
+
+
+		@Override
+		public void keyPressed(KeyEvent e) {
+			// TODO Auto-generated method stub
+
+		}
+
+
+		@Override
+		public void keyReleased(KeyEvent e) 
+		{
+			System.out.println("key released");
+			if(e.getKeyCode() == KeyEvent.VK_ENTER)
+				update();
+		}
+
+
+		@Override
+		public void stateChanged(ChangeEvent e) {
+			// TODO Auto-generated method stub
+
+		}
+
+
+		/*
+		@Override
+		public void selectionChanged(SelectionChangeEvent<XYCursor> arg0) {
+			// TODO Auto-generated method stub
+
+		}
+		 */
+
+
 	}
-	public Charts(File file, int taxLevel, double eValue, String title)
+	public Charts(File file, int covNum, double eValue)
 	{
-		super(title);
+		super("Blobsplorer");
 		System.out.println("in Charts");
 		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		JPanel content = createDemoPanel(file, taxLevel, eValue, title);
+		JPanel content = createDemoPanel(file, covNum, eValue);
 		setContentPane(content);
 	}
 
 
 
-	public static  JPanel createDemoPanel(File file, int taxLevel, double eValue, String title) 
+	public static  JPanel createDemoPanel(File file, int covLevel, double eValue) 
 	{
 		System.out.println("in createDemoPanel");
-		return new BlobPanel(file, taxLevel, eValue, title);
+		return new BlobPanel(file, covLevel, eValue);
 	}
 
 
@@ -1100,7 +1443,7 @@ public void selectionChanged(SelectionChangeEvent<XYCursor> event)
 		return chart;
 	}
 
-	
+
 
 
 	public final static JPanel createDemoPanel()
