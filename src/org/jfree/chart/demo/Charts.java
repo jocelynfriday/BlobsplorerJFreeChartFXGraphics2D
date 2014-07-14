@@ -17,10 +17,16 @@ import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.Writer;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -39,6 +45,15 @@ import java.util.logging.Logger;
 
 
 
+
+
+
+
+
+
+
+
+import javafx.scene.text.Text;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
@@ -126,6 +141,7 @@ public class Charts extends ApplicationFrame{
 		private Range lastYRange;
 		private DefaultTableModel model;
 		private JTable table;
+		private static ArrayList<String> history;
 
 
 		private static File file;
@@ -384,17 +400,30 @@ public class Charts extends ApplicationFrame{
 					if(taxComboBox.getSelectedIndex() != taxaIndex)
 					{
 						taxaIndex = taxComboBox.getSelectedIndex();
+						history.add( "Taxa index changed to: " + taxaNames[taxaIndex] + "at index: " + taxaIndex);
 						updateClassifications();
 					}
 					if(covComboBox.getSelectedIndex() != covLibraryIndex)
 					{
 						covLibraryIndex = covComboBox.getSelectedIndex();
+						history.add( "Coverage library changed to:  "+ covLibraryNames[covLibraryIndex] + "at index: " + covLibraryIndex);
 					}
-					
+
 					update();
 				}
 			});
 
+			JButton reload = new JButton("Restart");
+			reload.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e)
+				{
+
+					readFile();					
+				}
+			});
+			filterPanel.add(reload);
 			filterPanel.add(submit);
 			return filterPanel;
 		}
@@ -431,41 +460,190 @@ public class Charts extends ApplicationFrame{
 
 		private JPanel createExportPanel() 
 		{
+
 			JPanel exportPanel = new JPanel();
+
 			exportPanel.setLayout(new BoxLayout(exportPanel, BoxLayout.Y_AXIS));
-			JPanel file = new JPanel();
-			Label fileNameLabel = new Label ("Export File Name:");
+			JPanel filePanel = new JPanel();
+			JLabel fileNameLabel = new JLabel ("Export file name:");
 			TextField fileField = new TextField(20);
-			file.add(fileNameLabel);
-			file.add(fileField);
-			exportPanel.add(file);
+			filePanel.add(fileNameLabel);
+			filePanel.add(fileField);
+			exportPanel.add(filePanel);
+
+			JPanel historyPanel = new JPanel();
+			JLabel historyFileName = new JLabel ("History file name:");
+			TextField historyField = new TextField(20);
+			historyPanel.add(historyFileName);
+			historyPanel.add(historyField);
+			exportPanel.add(historyPanel);
+
 
 			JPanel buttonPanel = new JPanel();
 
-			JButton reload = new JButton("Restart");
-			reload.addActionListener(new ActionListener()
-			{
-				@Override
-				public void actionPerformed(ActionEvent e)
-				{
-					readFile();					
-				}
-			});
 
-			buttonPanel.add(reload);
 
-			JButton export = new JButton("Export");
+			final Text errorMessage = new Text();
+			//exportPanel.add(errorMessage);
+			JButton export = new JButton("Export visible contigs");
 			export.addActionListener(new ActionListener()
 			{
 				public void actionPerformed(ActionEvent e)
 				{
 					System.out.println("action performed in submit");
+					Writer fileWriter = null;
+					BufferedWriter bufferedWriter = null;
+					try
+					{
+						String export = fileField.getText();
 
-					//printToFile();
+						Path file = Paths.get(export);
+						//file already exists in location
+						if(Files.exists(file))
+						{
+							errorMessage.setText("File already exists");
+							System.out.println("FILE ALREADy exists");
+							return;
+						}
+						//file does not exist
+						else
+						{
+							java.nio.charset.Charset charset = java.nio.charset.StandardCharsets.US_ASCII;
+							BufferedWriter writer = Files.newBufferedWriter(file, charset);
+							writer.write(header);
+							writer.newLine();
+							for(int i = 0; i < contigSet.size(); i ++)
+							{
+								String contigLine = "";
+								if(contigSet.get(i).isVisible())
+								{
+									contigLine = contigSet.get(i).getID() + "\t";
+									contigLine += contigSet.get(i).getLen() + "\t";
+									contigLine += contigSet.get(i).getGC() + "\t";
+									double [] cov = contigSet.get(i).getCov();
+									for(int j = 0; j < cov.length; j ++)
+									{
+										contigLine += covLibraryNames[j] + "=" + cov[j] + ";";
+									}
+
+									contigLine += "\t";
+									String [] tax = contigSet.get(i).getTax();
+									for (int j = 0; j < tax.length; j++)
+									{
+										contigLine += taxaNames[j]  + "=" + tax[j] + ";";
+									}
+									contigLine += "\t";
+									contigLine += contigSet.get(i).getEValue();
+									writer.write(contigLine, 0, contigLine.length());
+									writer.newLine();
+
+								}
+							}
+
+						}
+					}
+					catch(InvalidPathException ip)
+					{
+						errorMessage.setText("Invalid path error");
+						ip.printStackTrace();
+					}
+					catch(SecurityException se)
+					{
+						errorMessage.setText("Incorrect security permissions");
+						se.printStackTrace();
+					} catch (IOException e1) 
+					{
+						errorMessage.setText("IO exception");
+						e1.printStackTrace();
+					}
+					finally
+					{
+						if(bufferedWriter != null && fileWriter != null)
+						{
+							try
+							{
+								bufferedWriter.close();
+								fileWriter.close();
+							}
+							catch (IOException ioe)
+							{
+								ioe.printStackTrace();
+							}
+						}
+					}
 				}
 			});
 
 			buttonPanel.add(export);
+
+			JButton historyButton = new JButton("Create History");
+			historyButton.addActionListener(new ActionListener()
+			{
+				public void actionPerformed(ActionEvent e)
+				{
+					System.out.println("action performed in submit");
+					Writer fileWriter = null;
+					BufferedWriter bufferedWriter = null;
+					try
+					{
+						String historyExport = historyField.getText();
+
+						Path file = Paths.get(historyExport);
+						//file already exists in location
+						if(Files.exists(file))
+						{
+							errorMessage.setText("File already exists");
+							System.out.println("FILE ALREADy exists");
+							return;
+						}
+						//file does not exist
+						else
+						{
+							java.nio.charset.Charset charset = java.nio.charset.StandardCharsets.US_ASCII;
+							BufferedWriter writer = Files.newBufferedWriter(file, charset);
+							for(String line: history)
+							{
+								writer.write(line, 0, line.length());
+								writer.newLine();
+							}
+
+						}
+
+
+					}
+					catch(InvalidPathException ip)
+					{
+						errorMessage.setText("Invalid path error");
+						ip.printStackTrace();
+					}
+					catch(SecurityException se)
+					{
+						errorMessage.setText("Incorrect security permissions");
+						se.printStackTrace();
+					} catch (IOException e1) 
+					{
+						errorMessage.setText("IO exception");
+						e1.printStackTrace();
+					}
+					finally
+					{
+						if(bufferedWriter != null && fileWriter != null)
+						{
+							try
+							{
+								bufferedWriter.close();
+								fileWriter.close();
+							}
+							catch (IOException ioe)
+							{
+								ioe.printStackTrace();
+							}
+						}
+					}
+				}
+			});
+
+			buttonPanel.add(historyButton);
 			exportPanel.add(buttonPanel);
 
 			return exportPanel;
@@ -534,12 +712,16 @@ public class Charts extends ApplicationFrame{
 		{
 			System.out.println("Update");
 			minContigLength = this.lengthJSlider.getValue();
+			history.add( "Minimum contig length changed to: " + minContigLength);
 
 			double exponent = this.eValueJSlider.getValue();
 			maxEValue = 1* Math.pow(10,-exponent);
-			minCov = this.covJSlider.getValue();
+
+			history.add( "Maximum E-Value changed to: " + maxEValue);
 
 			minCov = this.covJSlider.getValue();
+
+			history.add( "Minumum coverage changed to: " + minCov);
 			updateDataset();
 			getTaxaForDisplay();
 			XYSeriesCollection newScatterData = createDataset();
@@ -1018,6 +1200,9 @@ public class Charts extends ApplicationFrame{
 		public static boolean readFile()
 		{
 			System.out.println("in readfile");
+
+			history = new ArrayList<String>();
+
 			BufferedReader bufferedReader = null;
 			boolean correct = true;
 			try 
@@ -1065,7 +1250,10 @@ public class Charts extends ApplicationFrame{
 						}
 					}
 				} 
-
+				history.add("Initial default minimum coverage: " + defaultMinCov);
+				history.add("Initial default E-Value: " + defaultEValue);
+				history.add("Initial taxonomic level: " + taxaNames[taxaIndex]);
+				history.add("Initial coverage library: " + covLibraryNames[covLibraryIndex]);
 			} 
 			catch (FileNotFoundException ex) 
 			{
