@@ -1,0 +1,234 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en">
+<head>
+<title>Source code</title>
+<link rel="stylesheet" type="text/css" href="../../../../stylesheet.css" title="Style">
+</head>
+<body>
+<div class="sourceContainer">
+<pre><span class="sourceLineNo">001</span>/* ===================================================<a name="line.1"></a>
+<span class="sourceLineNo">002</span> * JFreeSVG : an SVG library for the Java(tm) platform<a name="line.2"></a>
+<span class="sourceLineNo">003</span> * ===================================================<a name="line.3"></a>
+<span class="sourceLineNo">004</span> * <a name="line.4"></a>
+<span class="sourceLineNo">005</span> * (C)opyright 2013, 2014, by Object Refinery Limited.  All rights reserved.<a name="line.5"></a>
+<span class="sourceLineNo">006</span> *<a name="line.6"></a>
+<span class="sourceLineNo">007</span> * Project Info:  http://www.jfree.org/jfreesvg/index.html<a name="line.7"></a>
+<span class="sourceLineNo">008</span> * <a name="line.8"></a>
+<span class="sourceLineNo">009</span> * This program is free software: you can redistribute it and/or modify<a name="line.9"></a>
+<span class="sourceLineNo">010</span> * it under the terms of the GNU Affero General Public License as published by<a name="line.10"></a>
+<span class="sourceLineNo">011</span> * the Free Software Foundation, either version 3 of the License, or<a name="line.11"></a>
+<span class="sourceLineNo">012</span> * (at your option) any later version.<a name="line.12"></a>
+<span class="sourceLineNo">013</span> *<a name="line.13"></a>
+<span class="sourceLineNo">014</span> * This program is distributed in the hope that it will be useful,<a name="line.14"></a>
+<span class="sourceLineNo">015</span> * but WITHOUT ANY WARRANTY; without even the implied warranty of<a name="line.15"></a>
+<span class="sourceLineNo">016</span> * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the<a name="line.16"></a>
+<span class="sourceLineNo">017</span> * GNU Affero General Public License for more details.<a name="line.17"></a>
+<span class="sourceLineNo">018</span> *<a name="line.18"></a>
+<span class="sourceLineNo">019</span> * You should have received a copy of the GNU Affero General Public License<a name="line.19"></a>
+<span class="sourceLineNo">020</span> * along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.<a name="line.20"></a>
+<span class="sourceLineNo">021</span> * <a name="line.21"></a>
+<span class="sourceLineNo">022</span> * [Oracle and Java are registered trademarks of Oracle and/or its affiliates. <a name="line.22"></a>
+<span class="sourceLineNo">023</span> * Other names may be trademarks of their respective owners.]<a name="line.23"></a>
+<span class="sourceLineNo">024</span> * <a name="line.24"></a>
+<span class="sourceLineNo">025</span> * If you do not wish to be bound by the terms of the AGPL, an alternative<a name="line.25"></a>
+<span class="sourceLineNo">026</span> * commercial license can be purchased.  For details, please see visit the<a name="line.26"></a>
+<span class="sourceLineNo">027</span> * JFreeSVG home page:<a name="line.27"></a>
+<span class="sourceLineNo">028</span> * <a name="line.28"></a>
+<span class="sourceLineNo">029</span> * http://www.jfree.org/jfreesvg<a name="line.29"></a>
+<span class="sourceLineNo">030</span> * <a name="line.30"></a>
+<span class="sourceLineNo">031</span> */<a name="line.31"></a>
+<span class="sourceLineNo">032</span><a name="line.32"></a>
+<span class="sourceLineNo">033</span>package org.jfree.graphics2d;<a name="line.33"></a>
+<span class="sourceLineNo">034</span><a name="line.34"></a>
+<span class="sourceLineNo">035</span>import java.awt.Polygon;<a name="line.35"></a>
+<span class="sourceLineNo">036</span>import java.awt.Shape;<a name="line.36"></a>
+<span class="sourceLineNo">037</span>import java.awt.geom.Arc2D;<a name="line.37"></a>
+<span class="sourceLineNo">038</span>import java.awt.geom.Ellipse2D;<a name="line.38"></a>
+<span class="sourceLineNo">039</span>import java.awt.geom.GeneralPath;<a name="line.39"></a>
+<span class="sourceLineNo">040</span>import java.awt.geom.Line2D;<a name="line.40"></a>
+<span class="sourceLineNo">041</span>import java.awt.geom.Path2D;<a name="line.41"></a>
+<span class="sourceLineNo">042</span>import java.awt.geom.Rectangle2D;<a name="line.42"></a>
+<span class="sourceLineNo">043</span>import java.awt.geom.RoundRectangle2D;<a name="line.43"></a>
+<span class="sourceLineNo">044</span>import java.awt.image.BufferedImage;<a name="line.44"></a>
+<span class="sourceLineNo">045</span>import java.awt.image.ColorModel;<a name="line.45"></a>
+<span class="sourceLineNo">046</span>import java.awt.image.RenderedImage;<a name="line.46"></a>
+<span class="sourceLineNo">047</span>import java.awt.image.WritableRaster;<a name="line.47"></a>
+<span class="sourceLineNo">048</span>import java.util.Hashtable;<a name="line.48"></a>
+<span class="sourceLineNo">049</span><a name="line.49"></a>
+<span class="sourceLineNo">050</span>/**<a name="line.50"></a>
+<span class="sourceLineNo">051</span> * A collection of static utility methods for shapes and images.<a name="line.51"></a>
+<span class="sourceLineNo">052</span> */<a name="line.52"></a>
+<span class="sourceLineNo">053</span>public final class GraphicsUtils {<a name="line.53"></a>
+<span class="sourceLineNo">054</span>    <a name="line.54"></a>
+<span class="sourceLineNo">055</span>    private GraphicsUtils() {<a name="line.55"></a>
+<span class="sourceLineNo">056</span>        // no need to instantiate this<a name="line.56"></a>
+<span class="sourceLineNo">057</span>    }<a name="line.57"></a>
+<span class="sourceLineNo">058</span>    <a name="line.58"></a>
+<span class="sourceLineNo">059</span>    /**<a name="line.59"></a>
+<span class="sourceLineNo">060</span>     * Returns a shape that is (more or less) equivalent to the supplied shape.<a name="line.60"></a>
+<span class="sourceLineNo">061</span>     * For some known shape implementations (&lt;code&gt;Line2D&lt;/code&gt;, <a name="line.61"></a>
+<span class="sourceLineNo">062</span>     * &lt;code&gt;Rectangle2D&lt;/code&gt;, &lt;code&gt;RoundRectangle2D&lt;/code&gt;, <a name="line.62"></a>
+<span class="sourceLineNo">063</span>     * &lt;code&gt;Arc2D&lt;/code&gt;, &lt;code&gt;Ellipse2D&lt;/code&gt;, and &lt;code&gt;Polygon&lt;/code&gt;) <a name="line.63"></a>
+<span class="sourceLineNo">064</span>     * the copy will be an instance of that class.  For other shapes, a <a name="line.64"></a>
+<span class="sourceLineNo">065</span>     * &lt;code&gt;Path2D&lt;/code&gt; containing the outline of the shape is returned.<a name="line.65"></a>
+<span class="sourceLineNo">066</span>     * <a name="line.66"></a>
+<span class="sourceLineNo">067</span>     * @param shape  the shape (&lt;code&gt;null&lt;/code&gt; not permitted).<a name="line.67"></a>
+<span class="sourceLineNo">068</span>     * <a name="line.68"></a>
+<span class="sourceLineNo">069</span>     * @return A copy of the shape or shape outline (never &lt;code&gt;null&lt;/code&gt;). <a name="line.69"></a>
+<span class="sourceLineNo">070</span>     */<a name="line.70"></a>
+<span class="sourceLineNo">071</span>    public static Shape copyOf(Shape shape) {<a name="line.71"></a>
+<span class="sourceLineNo">072</span>       Args.nullNotPermitted(shape, "shape");<a name="line.72"></a>
+<span class="sourceLineNo">073</span>       if (shape instanceof Line2D) {<a name="line.73"></a>
+<span class="sourceLineNo">074</span>           Line2D l = (Line2D) shape;<a name="line.74"></a>
+<span class="sourceLineNo">075</span>           return new Line2D.Double(l.getX1(), l.getY1(), l.getX2(), l.getY2());<a name="line.75"></a>
+<span class="sourceLineNo">076</span>       }<a name="line.76"></a>
+<span class="sourceLineNo">077</span>       if (shape instanceof Rectangle2D) {<a name="line.77"></a>
+<span class="sourceLineNo">078</span>           Rectangle2D r = (Rectangle2D) shape;<a name="line.78"></a>
+<span class="sourceLineNo">079</span>           return new Rectangle2D.Double(r.getX(), r.getY(), r.getWidth(), <a name="line.79"></a>
+<span class="sourceLineNo">080</span>                   r.getHeight());<a name="line.80"></a>
+<span class="sourceLineNo">081</span>       }<a name="line.81"></a>
+<span class="sourceLineNo">082</span>       if (shape instanceof RoundRectangle2D) {<a name="line.82"></a>
+<span class="sourceLineNo">083</span>           RoundRectangle2D rr = (RoundRectangle2D) shape;<a name="line.83"></a>
+<span class="sourceLineNo">084</span>           return new RoundRectangle2D.Double(rr.getX(), rr.getY(), <a name="line.84"></a>
+<span class="sourceLineNo">085</span>                   rr.getWidth(), rr.getHeight(), rr.getArcWidth(), <a name="line.85"></a>
+<span class="sourceLineNo">086</span>                   rr.getArcHeight());<a name="line.86"></a>
+<span class="sourceLineNo">087</span>       }<a name="line.87"></a>
+<span class="sourceLineNo">088</span>       if (shape instanceof Arc2D) {<a name="line.88"></a>
+<span class="sourceLineNo">089</span>           Arc2D arc = (Arc2D) shape;<a name="line.89"></a>
+<span class="sourceLineNo">090</span>           return new Arc2D.Double(arc.getX(), arc.getY(), arc.getWidth(),<a name="line.90"></a>
+<span class="sourceLineNo">091</span>                   arc.getHeight(), arc.getAngleStart(), arc.getAngleExtent(),<a name="line.91"></a>
+<span class="sourceLineNo">092</span>                   arc.getArcType());<a name="line.92"></a>
+<span class="sourceLineNo">093</span>       }<a name="line.93"></a>
+<span class="sourceLineNo">094</span>       if (shape instanceof Ellipse2D) {<a name="line.94"></a>
+<span class="sourceLineNo">095</span>           Ellipse2D ell = (Ellipse2D) shape;<a name="line.95"></a>
+<span class="sourceLineNo">096</span>           return new Ellipse2D.Double(ell.getX(), ell.getY(), ell.getWidth(),<a name="line.96"></a>
+<span class="sourceLineNo">097</span>                   ell.getHeight());<a name="line.97"></a>
+<span class="sourceLineNo">098</span>       }<a name="line.98"></a>
+<span class="sourceLineNo">099</span>       if (shape instanceof Polygon) {<a name="line.99"></a>
+<span class="sourceLineNo">100</span>           Polygon p = (Polygon) shape;<a name="line.100"></a>
+<span class="sourceLineNo">101</span>           return new Polygon(p.xpoints, p.ypoints, p.npoints);<a name="line.101"></a>
+<span class="sourceLineNo">102</span>       }<a name="line.102"></a>
+<span class="sourceLineNo">103</span>       return new Path2D.Double(shape);<a name="line.103"></a>
+<span class="sourceLineNo">104</span>    }<a name="line.104"></a>
+<span class="sourceLineNo">105</span><a name="line.105"></a>
+<span class="sourceLineNo">106</span>    /**<a name="line.106"></a>
+<span class="sourceLineNo">107</span>     * Creates a polygon from the specified &lt;code&gt;x&lt;/code&gt; and <a name="line.107"></a>
+<span class="sourceLineNo">108</span>     * &lt;code&gt;y&lt;/code&gt; coordinate arrays.<a name="line.108"></a>
+<span class="sourceLineNo">109</span>     * <a name="line.109"></a>
+<span class="sourceLineNo">110</span>     * @param xPoints  the x-points.<a name="line.110"></a>
+<span class="sourceLineNo">111</span>     * @param yPoints  the y-points.<a name="line.111"></a>
+<span class="sourceLineNo">112</span>     * @param nPoints  the number of points to use for the polyline.<a name="line.112"></a>
+<span class="sourceLineNo">113</span>     * @param close  closed?<a name="line.113"></a>
+<span class="sourceLineNo">114</span>     * <a name="line.114"></a>
+<span class="sourceLineNo">115</span>     * @return A polygon.<a name="line.115"></a>
+<span class="sourceLineNo">116</span>     */<a name="line.116"></a>
+<span class="sourceLineNo">117</span>    public static GeneralPath createPolygon(int[] xPoints, int[] yPoints, <a name="line.117"></a>
+<span class="sourceLineNo">118</span>            int nPoints, boolean close) {<a name="line.118"></a>
+<span class="sourceLineNo">119</span>        GeneralPath p = new GeneralPath();<a name="line.119"></a>
+<span class="sourceLineNo">120</span>        p.moveTo(xPoints[0], yPoints[0]);<a name="line.120"></a>
+<span class="sourceLineNo">121</span>        for (int i = 1; i &lt; nPoints; i++) {<a name="line.121"></a>
+<span class="sourceLineNo">122</span>            p.lineTo(xPoints[i], yPoints[i]);<a name="line.122"></a>
+<span class="sourceLineNo">123</span>        }<a name="line.123"></a>
+<span class="sourceLineNo">124</span>        if (close) {<a name="line.124"></a>
+<span class="sourceLineNo">125</span>            p.closePath();<a name="line.125"></a>
+<span class="sourceLineNo">126</span>        }<a name="line.126"></a>
+<span class="sourceLineNo">127</span>        return p;<a name="line.127"></a>
+<span class="sourceLineNo">128</span>    }<a name="line.128"></a>
+<span class="sourceLineNo">129</span><a name="line.129"></a>
+<span class="sourceLineNo">130</span>    /**<a name="line.130"></a>
+<span class="sourceLineNo">131</span>     * Converts a rendered image to a &lt;code&gt;BufferedImage&lt;/code&gt;.  This utility<a name="line.131"></a>
+<span class="sourceLineNo">132</span>     * method has come from a forum post by Jim Moore at:<a name="line.132"></a>
+<span class="sourceLineNo">133</span>     * &lt;p&gt;<a name="line.133"></a>
+<span class="sourceLineNo">134</span>     * &lt;a href="http://www.jguru.com/faq/view.jsp?EID=114602"&gt;<a name="line.134"></a>
+<span class="sourceLineNo">135</span>     * http://www.jguru.com/faq/view.jsp?EID=114602&lt;/a&gt;<a name="line.135"></a>
+<span class="sourceLineNo">136</span>     * <a name="line.136"></a>
+<span class="sourceLineNo">137</span>     * @param img  the rendered image.<a name="line.137"></a>
+<span class="sourceLineNo">138</span>     * <a name="line.138"></a>
+<span class="sourceLineNo">139</span>     * @return A buffered image. <a name="line.139"></a>
+<span class="sourceLineNo">140</span>     */<a name="line.140"></a>
+<span class="sourceLineNo">141</span>    public static BufferedImage convertRenderedImage(RenderedImage img) {<a name="line.141"></a>
+<span class="sourceLineNo">142</span>        if (img instanceof BufferedImage) {<a name="line.142"></a>
+<span class="sourceLineNo">143</span>            return (BufferedImage) img; <a name="line.143"></a>
+<span class="sourceLineNo">144</span>        }<a name="line.144"></a>
+<span class="sourceLineNo">145</span>        ColorModel cm = img.getColorModel();<a name="line.145"></a>
+<span class="sourceLineNo">146</span>        int width = img.getWidth();<a name="line.146"></a>
+<span class="sourceLineNo">147</span>        int height = img.getHeight();<a name="line.147"></a>
+<span class="sourceLineNo">148</span>        WritableRaster raster = cm.createCompatibleWritableRaster(width, height);<a name="line.148"></a>
+<span class="sourceLineNo">149</span>        boolean isAlphaPremultiplied = cm.isAlphaPremultiplied();<a name="line.149"></a>
+<span class="sourceLineNo">150</span>        Hashtable properties = new Hashtable();<a name="line.150"></a>
+<span class="sourceLineNo">151</span>        String[] keys = img.getPropertyNames();<a name="line.151"></a>
+<span class="sourceLineNo">152</span>        if (keys != null) {<a name="line.152"></a>
+<span class="sourceLineNo">153</span>            for (int i = 0; i &lt; keys.length; i++) {<a name="line.153"></a>
+<span class="sourceLineNo">154</span>                properties.put(keys[i], img.getProperty(keys[i]));<a name="line.154"></a>
+<span class="sourceLineNo">155</span>            }<a name="line.155"></a>
+<span class="sourceLineNo">156</span>        }<a name="line.156"></a>
+<span class="sourceLineNo">157</span>        BufferedImage result = new BufferedImage(cm, raster, <a name="line.157"></a>
+<span class="sourceLineNo">158</span>                isAlphaPremultiplied, properties);<a name="line.158"></a>
+<span class="sourceLineNo">159</span>        img.copyData(raster);<a name="line.159"></a>
+<span class="sourceLineNo">160</span>        return result;<a name="line.160"></a>
+<span class="sourceLineNo">161</span>    }<a name="line.161"></a>
+<span class="sourceLineNo">162</span>}<a name="line.162"></a>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</pre>
+</div>
+</body>
+</html>
