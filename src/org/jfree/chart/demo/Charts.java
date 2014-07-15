@@ -35,24 +35,6 @@ import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import javafx.scene.text.Text;
 
 import javax.swing.BorderFactory;
@@ -76,6 +58,7 @@ import javax.swing.border.TitledBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumnModel;
 
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
@@ -86,6 +69,10 @@ import org.jfree.chart.axis.AxisLocation;
 import org.jfree.chart.axis.LogAxis;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.axis.NumberTickUnit;
+import org.jfree.chart.block.BlockBorder;
+import org.jfree.chart.block.BlockContainer;
+import org.jfree.chart.block.BorderArrangement;
+import org.jfree.chart.block.LabelBlock;
 import org.jfree.chart.event.ChartChangeEvent;
 import org.jfree.chart.event.ChartChangeListener;
 //import org.jfree.chart.panel.selectionhandler.EntitySelectionManager;
@@ -94,6 +81,10 @@ import org.jfree.chart.event.ChartChangeListener;
 //import org.jfree.chart.panel.selectionhandler.RectangularRegionSelectionHandler;
 //import org.jfree.chart.panel.selectionhandler.RegionSelectionHandler;
 
+import org.jfree.chart.panel.selectionhandler.EntitySelectionManager;
+import org.jfree.chart.panel.selectionhandler.MouseClickSelectionHandler;
+import org.jfree.chart.panel.selectionhandler.RectangularRegionSelectionHandler;
+import org.jfree.chart.panel.selectionhandler.RegionSelectionHandler;
 import org.jfree.chart.plot.Plot;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.ValueAxisPlot;
@@ -111,6 +102,7 @@ import org.jfree.chart.renderer.xy.XYDotRenderer;
 import org.jfree.chart.renderer.xy.XYItemRenderer;
 import org.jfree.chart.title.LegendTitle;
 import org.jfree.chart.ui.NumberCellRenderer;
+import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.data.Range;
 import org.jfree.data.extension.DatasetIterator;
 import org.jfree.data.extension.DatasetSelectionExtension;
@@ -127,7 +119,7 @@ import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 
 public class Charts extends ApplicationFrame{
-	static class BlobPanel extends DemoPanel implements ItemListener, ChangeListener, ChartChangeListener, KeyListener //, SelectionChangeListener<XYCursor>
+	static class BlobPanel extends DemoPanel implements ItemListener, ChangeListener, ChartChangeListener, KeyListener , SelectionChangeListener<XYCursor>
 	{
 		//private XYDataset dataset;
 		private XYSeriesCollection dataset;
@@ -141,6 +133,7 @@ public class Charts extends ApplicationFrame{
 		private Range lastYRange;
 		private DefaultTableModel model;
 		private JTable table;
+		private LegendTitle legend;
 		private static ArrayList<String> history;
 
 
@@ -162,7 +155,7 @@ public class Charts extends ApplicationFrame{
 		private static double minY = 0;
 		private static double maxY = 0;
 		private static double minFoundEValue= 0;
-		private static final int numOfBuckets = 100;
+		private static final int numOfBuckets = 200;
 		private static String header = "";
 		private static String[] taxaNames;
 		private static String [] covLibraryNames;
@@ -182,6 +175,7 @@ public class Charts extends ApplicationFrame{
 
 			ChartPanel chartPanel = (ChartPanel) createMainPanel();
 			chartPanel.setPreferredSize(new java.awt.Dimension(700, 500));
+			
 			add(chartPanel);
 
 
@@ -245,9 +239,9 @@ public class Charts extends ApplicationFrame{
 
 
 			//panel for layout
-			JPanel legend = new JPanel();
-			legend.setPreferredSize(new Dimension(200,10));
-			minLengthPanel.add(legend, BorderLayout.EAST);
+			JPanel spacing = new JPanel();
+			spacing.setPreferredSize(new Dimension(200,10));
+			minLengthPanel.add(spacing, BorderLayout.EAST);
 
 			minLengthPanel.add(lengthPanel);
 
@@ -256,6 +250,8 @@ public class Charts extends ApplicationFrame{
 			this.mainChart.setNotify(true);
 			System.out.println("***FINISHED Blob");
 			createTabbedControl();
+			
+		 
 		}
 
 
@@ -279,12 +275,28 @@ public class Charts extends ApplicationFrame{
 		private JPanel createStatsPanel()
 		{
 			JPanel statsPanel = new JPanel(new BorderLayout());
+			JPanel stable = new JPanel();
 			DefaultTableModel stats = new DefaultTableModel(new String [] {"Statistic", "Value"}, 0);
 			JTable statsTable = new JTable(stats);
 			statsTable.setPreferredSize(new Dimension(300,300));
-			statsPanel.setBorder(BorderFactory.createCompoundBorder(new TitledBorder("Visible contigs: "), new EmptyBorder(4,4,4,4)));
-			statsPanel.add(statsTable, BorderLayout.CENTER);
+			stable.setBorder(BorderFactory.createCompoundBorder(new TitledBorder("Visible contigs: "), new EmptyBorder(4,4,4,4)));
+			stable.add(statsTable, BorderLayout.CENTER);
 			statistics(contigSet, stats);
+			JSplitPane split = new JSplitPane(1);
+			
+			split.add(stable);
+			this.model = new DefaultTableModel(new String[] { "S. Statistic:", "S. Value:" }, 0);
+
+		    this.table = new JTable(this.model);
+	
+		   
+		    JPanel p = new JPanel(new BorderLayout());
+		    JScrollPane scroller = new JScrollPane(this.table);
+		    p.add(scroller);
+		    p.setBorder(BorderFactory.createCompoundBorder(new TitledBorder("Selected Items: "), new EmptyBorder(4, 4, 4, 4)));
+
+		    split.add(p);
+		    statsPanel.add(split);
 			return statsPanel;
 		}
 
@@ -314,6 +326,7 @@ public class Charts extends ApplicationFrame{
 
 		public void itemStateChanged(ItemEvent ie)
 		{
+			System.out.println("in itemStateChanged");
 			int series = -1;
 			for(int i = 0; i < taxaForDisplay.size(); i ++)
 			{
@@ -323,6 +336,7 @@ public class Charts extends ApplicationFrame{
 				}
 			}
 		}
+	
 
 		private JPanel createFilterPanel()
 		{
@@ -375,6 +389,7 @@ public class Charts extends ApplicationFrame{
 				taxModel.addElement(taxaNames[i]);
 			}
 			final JComboBox<String> taxComboBox = new JComboBox<String>(taxModel);
+			taxComboBox.setSelectedIndex(taxaIndex);
 			pullDown.add(taxComboBox);
 
 			JLabel covPullDownLabel = new JLabel("Select coverage library:");
@@ -386,6 +401,7 @@ public class Charts extends ApplicationFrame{
 				covModel.addElement(covLibraryNames[i]);
 			}
 			final JComboBox<String> covComboBox = new JComboBox<String>(covModel);
+			covComboBox.setSelectedIndex(covLibraryIndex);
 			pullDown.add(covComboBox);
 
 			filterPanel.add(pullDown);
@@ -462,29 +478,31 @@ public class Charts extends ApplicationFrame{
 		{
 
 			JPanel exportPanel = new JPanel();
-
+			final Text errorMessage = new Text();
 			exportPanel.setLayout(new BoxLayout(exportPanel, BoxLayout.Y_AXIS));
+			
+			JPanel svgPanel = new JPanel();
+			JLabel svgLabel = new JLabel("SVG file naem:");
+			svgPanel.add(svgLabel);
+			TextField svgField = new TextField(20);
+			svgPanel.add(svgField);
+			JButton create = new JButton ("Create SVG");
+			create.addActionListener(new ActionListener()
+			{
+				public void actionPerformed(ActionEvent e)
+				{
+					String svgName = svgField.getText();
+					
+					
+					
+				}
+			});
+			svgPanel.add(create);
 			JPanel filePanel = new JPanel();
 			JLabel fileNameLabel = new JLabel ("Export file name:");
 			TextField fileField = new TextField(20);
 			filePanel.add(fileNameLabel);
 			filePanel.add(fileField);
-			exportPanel.add(filePanel);
-
-			JPanel historyPanel = new JPanel();
-			JLabel historyFileName = new JLabel ("History file name:");
-			TextField historyField = new TextField(20);
-			historyPanel.add(historyFileName);
-			historyPanel.add(historyField);
-			exportPanel.add(historyPanel);
-
-
-			JPanel buttonPanel = new JPanel();
-
-
-
-			final Text errorMessage = new Text();
-			//exportPanel.add(errorMessage);
 			JButton export = new JButton("Export visible contigs");
 			export.addActionListener(new ActionListener()
 			{
@@ -574,8 +592,14 @@ public class Charts extends ApplicationFrame{
 				}
 			});
 
-			buttonPanel.add(export);
+			filePanel.add(export);
+			exportPanel.add(filePanel);
 
+			JPanel historyPanel = new JPanel();
+			JLabel historyFileName = new JLabel ("History file name:");
+			TextField historyField = new TextField(20);
+			historyPanel.add(historyFileName);
+			historyPanel.add(historyField);
 			JButton historyButton = new JButton("Create History");
 			historyButton.addActionListener(new ActionListener()
 			{
@@ -643,8 +667,9 @@ public class Charts extends ApplicationFrame{
 				}
 			});
 
-			buttonPanel.add(historyButton);
-			exportPanel.add(buttonPanel);
+			historyPanel.add(historyButton);
+			exportPanel.add(historyPanel);
+
 
 			return exportPanel;
 		}
@@ -653,11 +678,27 @@ public class Charts extends ApplicationFrame{
 		public JPanel createMainPanel()
 		{
 			System.out.println("in createMainPanel");
-			this.mainChart = createChart(new XYSeriesCollection());
+			XYDataset xydataset = createDataset();
+			DatasetSelectionExtension datasetExtension = new XYDatasetSelectionExtension(xydataset);
+			
+			datasetExtension.addChangeListener(this);
+			
+			this.mainChart = createChart(xydataset, datasetExtension);
 			this.mainChart.addChangeListener(this);
+			XYPlot plot = (XYPlot) this.mainChart.getPlot();
+			this.dataset = (XYSeriesCollection) plot.getDataset();
 			ChartPanel panel = new ChartPanel(this.mainChart);
 			panel.setFillZoomRectangle(true);
 			panel.setMouseWheelEnabled(true);
+			
+			RegionSelectionHandler selectionHandler = new RectangularRegionSelectionHandler();
+			panel.addMouseHandler(selectionHandler);
+			panel.addMouseHandler(new MouseClickSelectionHandler());
+			panel.removeMouseHandler(panel.getZoomHandler());
+		
+			DatasetExtensionManager dExManager = new DatasetExtensionManager();
+			dExManager.registerDatasetExtension(datasetExtension);
+			panel.setSelectionManager(new EntitySelectionManager(panel, new Dataset[] {xydataset}, dExManager));
 			return panel;
 		}
 
@@ -685,26 +726,42 @@ public class Charts extends ApplicationFrame{
 			}
 		}
 
-		private JFreeChart createChart(XYDataset dataset)
+		private JFreeChart createChart(XYDataset dataset, DatasetSelectionExtension<XYCursor> event)
 		{
 			System.out.println("In createChart");
-			this.dataset = createDataset();
+			this.dataset = (XYSeriesCollection) dataset;
 			JFreeChart chart = ChartFactory.createScatterPlot("", "GC", "COV", this.dataset);
 
 			XYPlot plot = (XYPlot) chart.getPlot();
+			plot.setNoDataMessage("No data available");
 			plot.setDomainPannable(true);
 			plot.setRangePannable(true);
 			NumberAxis xAxis = new NumberAxis("GC");
 			xAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
-			//	xAxis.setLowerMargin(0.0);
-			//	xAxis.setUpperMargin(0.0);
+			xAxis.setLowerMargin(0.0);
+				xAxis.setUpperMargin(0.0);
 			xAxis.setRange(0.0, 1.0);
 			plot.setDomainAxis(xAxis);
 			LogAxis yAxis = new LogAxis("COV");
 			yAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
-			//yAxis.setLowerMargin(0.0);
-			//	yAxis.setUpperMargin(0.0);
+			yAxis.setLowerMargin(0.0);
+			yAxis.setUpperMargin(0.0);
 			plot.setRangeAxis(yAxis);
+			
+			/*
+			legend = new LegendTitle(chart.getPlot());
+			BlockContainer wrapper = new BlockContainer(new BorderArrangement());
+			wrapper.setFrame(new BlockBorder(1.0, 1.0, 1.0, 1.0));
+			LabelBlock title = new LabelBlock("Legend Items:" );
+			title.setPadding(5,5,5,5);
+			wrapper.add(title, RectangleEdge.TOP);
+			BlockContainer items = legend.getItemContainer();
+			items.setPadding(2, 10, 5, 2);
+			wrapper.add(items);
+			legend.setWrapper(wrapper);
+			*/
+			
+			event.addChangeListener(plot);
 			return chart;
 		}
 
@@ -740,6 +797,7 @@ public class Charts extends ApplicationFrame{
 			taxaForDisplay = sortBySpan(topTaxa);
 		}
 
+		/*
 		private JFreeChart createChart(XYDataset dataset, DatasetSelectionExtension<XYCursor> datasetExtension) 
 		{
 			JFreeChart chart = ChartFactory.createScatterPlot("BlobSplorer", "GC", "COV", dataset);
@@ -776,6 +834,7 @@ public class Charts extends ApplicationFrame{
 			return chart;
 
 		}
+		*/
 		private static DefaultTableXYDataset createYDataset()
 		{
 			System.out.println("in createYDataset");
@@ -1473,13 +1532,40 @@ public class Charts extends ApplicationFrame{
 		}
 
 
+		
 		/*
+		 * (non-Javadoc)
+		 * @see org.jfree.data.general.SelectionChangeListener#selectionChanged(org.jfree.data.general.SelectionChangeEvent)
+		 */
+		
 		@Override
-		public void selectionChanged(SelectionChangeEvent<XYCursor> arg0) {
-			// TODO Auto-generated method stub
+		public void selectionChanged(SelectionChangeEvent<XYCursor> event) 
+		{
+			long start = System.nanoTime();
+			while(this.model.getRowCount() > 0)
+			{
+				this.model.removeRow(0);
+			}
+
+			XYDatasetSelectionExtension ext = (XYDatasetSelectionExtension)event.getSelectionExtension();
+			DatasetIterator itr = ext.getSelectionIterator(true);
+			//XYPlot plot = (XYPlot) chart.getPlot();
+
+			ArrayList<Contig> selected = new ArrayList<Contig>();
+			while(itr.hasNext())
+			{
+				XYCursor dc = (XYCursor)itr.next();
+				Comparable seriesKey = this.dataset.getSeriesKey(dc.series);
+				ArrayList<Contig> taxa = contigByTaxa.get(seriesKey);
+				selected.add(taxa.get(dc.item));
+			}
+			System.out.println("size of selected: " + selected.size());
+			statistics(selected, this.model);
+			long end = System.nanoTime();
+			System.out.println("Elapsed time of selection and statistics: " + (end - start));
 
 		}
-		 */
+		 
 
 
 	}
