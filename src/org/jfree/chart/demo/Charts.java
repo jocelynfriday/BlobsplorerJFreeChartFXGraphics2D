@@ -172,7 +172,7 @@ public class Charts extends ApplicationFrame{
 
 			ChartPanel chartPanel = (ChartPanel) createMainPanel();
 			chartPanel.setPreferredSize(new java.awt.Dimension(700, 500));
-			
+
 			add(chartPanel);
 
 
@@ -182,6 +182,7 @@ public class Charts extends ApplicationFrame{
 			//this.ySubChart = ChartFactory.createXYStackedBarChart("Domain count", "COV", "Count", yDataset, PlotOrientation.HORIZONTAL, false, false, false);
 			StackedXYBarRenderer stackedR = new StackedXYBarRenderer();
 			stackedR.setBarPainter(new StandardXYBarPainter());
+			stackedR.setRenderAsPercentages(true);
 			stackedR.setDrawBarOutline(false);
 			stackedR.setShadowVisible(false);
 			LogAxis yDomainAxis = new LogAxis("COV"); 
@@ -211,7 +212,8 @@ public class Charts extends ApplicationFrame{
 			DefaultTableXYDataset xDataset = createXDataset();
 			StackedXYBarRenderer stackedD = new StackedXYBarRenderer(.995);
 			stackedD.setBarPainter(new StandardXYBarPainter());
-			stackedD.setDrawBarOutline(true);
+			stackedD.setRenderAsPercentages(true);
+			stackedD.setDrawBarOutline(false);
 			stackedD.setShadowVisible(false);
 			NumberAxis xRangeAxis = new NumberAxis("Count"); 
 			//xRangeAxis.setRange(-1, 1E5);
@@ -247,8 +249,8 @@ public class Charts extends ApplicationFrame{
 			this.mainChart.setNotify(true);
 			System.out.println("***FINISHED Blob");
 			createTabbedControl();
-			
-		 
+
+
 		}
 
 
@@ -280,20 +282,20 @@ public class Charts extends ApplicationFrame{
 			stable.add(statsTable, BorderLayout.CENTER);
 			statistics(contigSet, stats);
 			JSplitPane split = new JSplitPane(1);
-			
+
 			split.add(stable);
 			this.model = new DefaultTableModel(new String[] { "S. Statistic:", "S. Value:" }, 0);
 
-		    this.table = new JTable(this.model);
-	
-		   
-		    JPanel p = new JPanel(new BorderLayout());
-		    JScrollPane scroller = new JScrollPane(this.table);
-		    p.add(scroller);
-		    p.setBorder(BorderFactory.createCompoundBorder(new TitledBorder("Selected Items: "), new EmptyBorder(4, 4, 4, 4)));
+			this.table = new JTable(this.model);
 
-		    split.add(p);
-		    statsPanel.add(split);
+
+			JPanel p = new JPanel(new BorderLayout());
+			JScrollPane scroller = new JScrollPane(this.table);
+			p.add(scroller);
+			p.setBorder(BorderFactory.createCompoundBorder(new TitledBorder("Selected Items: "), new EmptyBorder(4, 4, 4, 4)));
+
+			split.add(p);
+			statsPanel.add(split);
 			return statsPanel;
 		}
 
@@ -307,16 +309,50 @@ public class Charts extends ApplicationFrame{
 			taxPanel.add(titlePanel);
 
 			JPanel checkBoxPanel = new JPanel();
-			checkBoxPanel.setLayout(new BoxLayout(checkBoxPanel, BoxLayout.Y_AXIS));
+			int half = taxaForDisplay.size()/2+1;
+			GridLayout grid = new GridLayout(half, 1);
+
+			checkBoxPanel.setLayout(grid);
+
 			for(int i = taxaForDisplay.size()-1; i >= 0; i --)
 			{
-				JCheckBox box = new JCheckBox(taxaForDisplay.get(i), true);
+				String name = taxaForDisplay.get(i);
+				JCheckBox box = new JCheckBox(name, true);
 				box.setActionCommand(taxaForDisplay.get(i));
-				box.addItemListener(this);
+				box.addActionListener(new ActionListener()
+				{
+					XYItemRenderer renderer = ((XYPlot) mainChart.getPlot()).getRenderer();
+
+					public void actionPerformed(ActionEvent e)
+					{
+						if(e.getActionCommand().equals(name))
+						{
+							System.out.println("In checked: " +  name);
+							// int series = i;
+							//boolean visible = this.renderer.getItemVisible(series, 0);
+							//this.renderer.setSeriesVisible(series, Boolean.valueOf(!visible));
+						}
+					}
+
+				});
 				checkBoxPanel.add(box);
 			}
 			taxPanel.add(checkBoxPanel);
 
+			/*
+			JPanel buttonPanel = new JPanel();
+			JButton submit = new JButton("Submit changes");
+			submit.setMnemonic(KeyEvent.VK_ENTER);
+			submit.addActionListener(new ActionListener()
+			{
+				public void actionPerformed(ActionEvent e)
+				{
+
+				}
+			});
+			buttonPanel.add(submit);
+			taxPanel.add(buttonPanel);
+			 */
 			return taxPanel;
 		}
 
@@ -325,15 +361,16 @@ public class Charts extends ApplicationFrame{
 		{
 			System.out.println("in itemStateChanged");
 			int series = -1;
+			Object source = ie.getItemSelectable();
 			for(int i = 0; i < taxaForDisplay.size(); i ++)
 			{
-				//if(ie.getActionCommand().equals(taxaForDisplay.get(i)))
+				//if(source ==.equals(taxaForDisplay.get(i)))
 				{
 
 				}
 			}
 		}
-	
+
 
 		private JPanel createFilterPanel()
 		{
@@ -477,7 +514,7 @@ public class Charts extends ApplicationFrame{
 			JPanel exportPanel = new JPanel();
 			final Text errorMessage = new Text();
 			exportPanel.setLayout(new BoxLayout(exportPanel, BoxLayout.Y_AXIS));
-			
+
 			JPanel svgPanel = new JPanel();
 			JLabel svgLabel = new JLabel("SVG file naem:");
 			svgPanel.add(svgLabel);
@@ -489,9 +526,9 @@ public class Charts extends ApplicationFrame{
 				public void actionPerformed(ActionEvent e)
 				{
 					String svgName = svgField.getText();
-					
-					
-					
+
+
+
 				}
 			});
 			svgPanel.add(create);
@@ -676,10 +713,10 @@ public class Charts extends ApplicationFrame{
 		{
 			System.out.println("in createMainPanel");
 			XYDataset xydataset = createDataset();
-			DatasetSelectionExtension datasetExtension = new XYDatasetSelectionExtension(xydataset);
-			
+			DatasetSelectionExtension<XYCursor> datasetExtension = new XYDatasetSelectionExtension(xydataset);
+
 			datasetExtension.addChangeListener(this);
-			
+
 			this.mainChart = createChart(xydataset, datasetExtension);
 			this.mainChart.addChangeListener(this);
 			XYPlot plot = (XYPlot) this.mainChart.getPlot();
@@ -687,12 +724,12 @@ public class Charts extends ApplicationFrame{
 			ChartPanel panel = new ChartPanel(this.mainChart);
 			panel.setFillZoomRectangle(true);
 			panel.setMouseWheelEnabled(true);
-			
+
 			RegionSelectionHandler selectionHandler = new RectangularRegionSelectionHandler();
 			panel.addMouseHandler(selectionHandler);
 			panel.addMouseHandler(new MouseClickSelectionHandler());
 			panel.removeMouseHandler(panel.getZoomHandler());
-		
+
 			DatasetExtensionManager dExManager = new DatasetExtensionManager();
 			dExManager.registerDatasetExtension(datasetExtension);
 			panel.setSelectionManager(new EntitySelectionManager(panel, new Dataset[] {xydataset}, dExManager));
@@ -736,7 +773,7 @@ public class Charts extends ApplicationFrame{
 			NumberAxis xAxis = new NumberAxis("GC");
 			xAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
 			xAxis.setLowerMargin(0.0);
-				xAxis.setUpperMargin(0.0);
+			xAxis.setUpperMargin(0.0);
 			xAxis.setRange(0.0, 1.0);
 			plot.setDomainAxis(xAxis);
 			LogAxis yAxis = new LogAxis("COV");
@@ -744,7 +781,7 @@ public class Charts extends ApplicationFrame{
 			yAxis.setLowerMargin(0.0);
 			yAxis.setUpperMargin(0.0);
 			plot.setRangeAxis(yAxis);
-			
+
 			/*
 			legend = new LegendTitle(chart.getPlot());
 			BlockContainer wrapper = new BlockContainer(new BorderArrangement());
@@ -756,8 +793,8 @@ public class Charts extends ApplicationFrame{
 			items.setPadding(2, 10, 5, 2);
 			wrapper.add(items);
 			legend.setWrapper(wrapper);
-			*/
-			
+			 */
+
 			event.addChangeListener(plot);
 			return chart;
 		}
@@ -831,20 +868,20 @@ public class Charts extends ApplicationFrame{
 			return chart;
 
 		}
-		*/
+		 */
 		private static DefaultTableXYDataset createYDataset()
 		{
 			System.out.println("in createYDataset");
 			DefaultTableXYDataset dataset = new DefaultTableXYDataset();
-			double total = maxY+100;
+			double total = maxY+1000;
 			System.out.println("total" + total);
-			double binSortFactor = total/500;
+			double binSortFactor = total/800;
 			System.out.println("bin factor: " + binSortFactor);
 
 			for(int i = 0; i < taxaForDisplay.size(); i ++)
 			{
 				XYSeries s = new XYSeries(taxaForDisplay.get(i), true, false);
-				double [] bins = segregateByBucket(contigByTaxa.get(taxaForDisplay.get(i)), 500, binSortFactor, 1);
+				double [] bins = segregateByBucket(contigByTaxa.get(taxaForDisplay.get(i)), 800, binSortFactor, 1);
 				for(int j = 0; j < bins.length; j ++)
 				{
 					s.add(j*binSortFactor, bins[j]);
@@ -1010,10 +1047,12 @@ public class Charts extends ApplicationFrame{
 				sorted.add(selection.get(i).getLen());
 			}
 			Collections.sort(sorted);
+			/*
 			for(int i = 0; i < sorted.size(); i ++)
 			{
 				System.out.println(sorted.get(i));
 			}
+			*/
 			if(sorted.size() == 1)
 				return sorted.get(0)*1.0;
 			else if (sorted.size() == 2)
@@ -1447,7 +1486,7 @@ public class Charts extends ApplicationFrame{
 					}
 
 				}
-				if (value > 500*splitFactor)
+				if (value > numBins*splitFactor)
 					System.out.println("Out of bounds");
 			}
 			return collection;
@@ -1529,12 +1568,12 @@ public class Charts extends ApplicationFrame{
 		}
 
 
-		
+
 		/*
 		 * (non-Javadoc)
 		 * @see org.jfree.data.general.SelectionChangeListener#selectionChanged(org.jfree.data.general.SelectionChangeEvent)
 		 */
-		
+
 		@Override
 		public void selectionChanged(SelectionChangeEvent<XYCursor> event) 
 		{
@@ -1562,7 +1601,7 @@ public class Charts extends ApplicationFrame{
 			System.out.println("Elapsed time of selection and statistics: " + (end - start));
 
 		}
-		 
+
 
 
 	}
