@@ -134,6 +134,7 @@ public class Charts extends ApplicationFrame{
 		private JTable table;
 		private LegendTitle legend;
 		private static ArrayList<String> history;
+		private Color [] colors;
 
 
 		private static File file;
@@ -172,11 +173,12 @@ public class Charts extends ApplicationFrame{
 			this.defaultEValue = eValue;
 			readFile(); // might add boolean check later
 			getTaxaForDisplay();
-
+			colors = createColorArray();
 
 			ChartPanel chartPanel = (ChartPanel) createMainPanel();
 			chartPanel.setPreferredSize(new java.awt.Dimension(700, 500));
-
+			
+			
 			add(chartPanel);
 
 
@@ -238,7 +240,25 @@ public class Charts extends ApplicationFrame{
 			lengthPanel.setPreferredSize(new Dimension(200,200));
 
 
-			  chartPanel.getChart().removeLegend();
+			XYItemRenderer r = ((XYPlot) chartPanel.getChart().getPlot()).getRenderer();
+			StackedXYBarRenderer yRenderer =  (StackedXYBarRenderer) ((XYPlot) ySubChart.getPlot()).getRenderer();
+			StackedXYBarRenderer xRenderer =  (StackedXYBarRenderer) ((XYPlot) xSubChart.getPlot()).getRenderer();
+
+			for(int i = 0; i < taxaForDisplay.size(); i ++)
+			{
+				Color paintMe = colors[i];
+				if (taxaForDisplay.get(i).equals("Not annotated"))
+				{
+					 paintMe = Color.LIGHT_GRAY;
+				}
+				r.setSeriesPaint(i, paintMe);
+				yRenderer.setSeriesPaint(i, paintMe);
+				xRenderer.setSeriesPaint(i, paintMe);
+			}
+			((XYPlot) chartPanel.getChart().getPlot()).setRenderer(r);
+			((XYPlot) xSubChart.getPlot()).setRenderer(xRenderer);
+			((XYPlot) ySubChart.getPlot()).setRenderer(yRenderer);
+			chartPanel.getChart().removeLegend();
 
 			//panel for layout
 			JPanel spacing = new JPanel();
@@ -474,6 +494,7 @@ public class Charts extends ApplicationFrame{
 					}
 
 					update();
+					
 				}
 			});
 
@@ -490,6 +511,7 @@ public class Charts extends ApplicationFrame{
 			buttonPanel.add(reload);
 			buttonPanel.add(submit);
 			
+			//Two check buttons to change how side panels are viewed
 			JPanel checkBoxPanel = new JPanel();
 			JCheckBox yPercentage = new JCheckBox("Show coverage graph as numerical count");
 			yPercentage.addActionListener(new ActionListener()
@@ -762,11 +784,7 @@ public class Charts extends ApplicationFrame{
 			this.mainChart = createChart(xydataset, datasetExtension);
 			this.mainChart.addChangeListener(this);
 			XYPlot plot = (XYPlot) this.mainChart.getPlot();
-			Color [] colors = createColorArray();
-			for(int i = 0; i < taxaForDisplay.size(); i ++)
-			{
-				//plot.setSelectionPaint()
-			}
+			
 			this.dataset = (XYSeriesCollection) plot.getDataset();
 			ChartPanel panel = new ChartPanel(this.mainChart);
 			panel.setFillZoomRectangle(true);
@@ -853,6 +871,7 @@ public class Charts extends ApplicationFrame{
 			updateDataset();
 			getTaxaForDisplay();
 			XYSeriesCollection newScatterData = createDataset();
+			this.dataset = newScatterData;
 			((XYPlot) this.mainChart.getPlot()).setDataset(newScatterData);
 			DefaultTableXYDataset newXDataset = createXDataset();
 			((XYPlot) this.xSubChart.getPlot()).setDataset(newXDataset);
@@ -1678,172 +1697,11 @@ public class Charts extends ApplicationFrame{
 		return new BlobPanel(file, covLevel, eValue);
 	}
 
-
-
-
-
-
-	/*
-	private static XYSeriesCollection createXDataset(ArrayList<String> taxaForDisplay)
-	{
-		HistogramDataset dataset = new HistogramDataset(0);
-
-		for(int i = 0; i < taxaForDisplay.size(); i ++) //loop through arrayLists associated with top taxa by span
-		{
-			String taxa = taxaForDisplay.get(i);
-			ArrayList<Contig> taxaSet = contigByTaxa.get(taxa);
-			double [] values = new double[taxaSet.size()];
-			for(int j = 0; j < taxaSet.size(); j ++)
-			{	
-				values[j] = taxaSet.get(j).getGC();
-			}
-			dataset.addSeries(taxa, values, 100, 0, 1);
-		}
-		return dataset;
-
-	}
-	 */
-
-	/*
-	private static DefaultTableXYDataset createXDataset(ArrayList<String> taxaForDisplay)
-	{
-		DefaultTableXYDataset dataset = new DefaultTableXYDataset(true);
-		//double xDifference = maxX - minX;
-		for(int i = 0; i < taxaForDisplay.size(); i ++)
-		{
-			XYSeries s = new XYSeries(taxaForDisplay.get(i), true, false);
-			double[] collection = segregateByBucket(contigByTaxa.get(taxaForDisplay.get(i)));
-			System.out.println(Arrays.toString(collection));
-			System.out.println(collection.length);
-			for (int j = 0; j < collection.length; j ++)
-			{
-				s.add(j*.01, collection[j]);
-			}
-			dataset.addSeries(s);
-		}
-		return dataset;
-	}
-	 */
-
-
-
-
-
-}
-/*
- * (non-Javadoc)
- * @see org.jfree.data.general.SelectionChangeListener#selectionChanged(org.jfree.data.general.SelectionChangeEvent)
- */
-/*
-@Override
-public void selectionChanged(SelectionChangeEvent<XYCursor> event) 
-{
-	long start = System.nanoTime();
-	while(this.model.getRowCount() > 0)
-	{
-		this.model.removeRow(0);
-	}
-
-	XYDatasetSelectionExtension ext = (XYDatasetSelectionExtension)event.getSelectionExtension();
-	DatasetIterator itr = ext.getSelectionIterator(true);
-	//XYPlot plot = (XYPlot) chart.getPlot();
-
-	ArrayList<Contig> selected = new ArrayList<Contig>();
-	while(itr.hasNext())
-	{
-		XYCursor dc = (XYCursor)itr.next();
-		Comparable seriesKey = this.dataset.getSeriesKey(dc.series);
-		ArrayList<Contig> taxa = contigByTaxa.get(seriesKey);
-		selected.add(taxa.get(dc.item));
-	}
-	statistics(selected);
-	long end = System.nanoTime();
-	System.out.println("Elapsed time of selection and statistics: " + (end - start));
-
 }
 
 
-}
- */
-/*
 
 
 
 
 
-
-
-
-	private static JFreeChart createChart(XYZDataset dataset, DatasetSelectionExtension datasetExtension) 
-	{
-		JFreeChart chart = ChartFactory.createBubbleChart(
-				"Blobsplorer : GC vs COV",    // title
-				"GC",             // x-axis label
-				"COV",      // y-axis label
-				dataset
-				);
-
-		String fontName = "Palatino";
-		chart.getTitle().setFont(new Font(fontName, Font.BOLD, 18));
-		chart.getLegend().setItemFont(new Font(fontName, Font.PLAIN, 14));
-		chart.getLegend().setFrame(BlockBorder.NONE);
-
-		XYPlot plot = (XYPlot) chart.getPlot();
-		plot.setDomainPannable(true);
-		plot.setRangePannable(true);
-		plot.setDomainCrosshairVisible(true);
-		plot.setRangeCrosshairVisible(true);
-
-
-		final org.jfree.chart.axis.NumberAxis domainAxis = new org.jfree.chart.axis.NumberAxis("GC");
-		LogAxis rangeAxis = new LogAxis("COV");
-		domainAxis.setRange(0.00, 1.00);
-		domainAxis.setTickUnit(new NumberTickUnit(0.1));
-
-		plot.setDomainAxis(domainAxis);
-		//plot.setRangeAxis(rangeAxis);
-		plot.setRenderer(new XYBubbleRenderer(2));
-		//plot.setBackgroundPaint(Color.WHITE);
-
-		//remember that the renderer is a bubble renderer
-		return chart;
-	}
-
-
-
-
-	public final static JPanel createDemoPanel()
-	  {
-	    XYZDataset xyzdataset = createScatterDataset();
-
-	    DatasetSelectionExtension datasetExtension = new XYDatasetSelectionExtension(xyzdataset);
-
-	   // datasetExtension.addChangeListener(this);
-
-	    JFreeChart chart = createChart(xyzdataset, datasetExtension);
-	    ChartPanel panel = new ChartPanel(chart);
-	    panel.setMouseWheelEnabled(true);
-
-	    RegionSelectionHandler selectionHandler = new FreePathSelectionHandler();
-
-	    panel.addMouseHandler(selectionHandler);
-	    panel.addMouseHandler(new MouseClickSelectionHandler());
-	    panel.removeMouseHandler(panel.getZoomHandler());
-
-	    DatasetExtensionManager dExManager = new DatasetExtensionManager();
-	    dExManager.registerDatasetExtension(datasetExtension);
-
-	    EntitySelectionManager selectionManager = new EntitySelectionManager(panel, new Dataset[] { xyzdataset }, dExManager);
-
-	    selectionManager.setIntersectionSelection(true);
-	    panel.setSelectionManager(selectionManager);
-
-	    return panel;
-	  }
-
-
-
-
-
-}
- */
