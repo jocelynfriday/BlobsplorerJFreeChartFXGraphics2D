@@ -131,6 +131,7 @@ public class Charts extends ApplicationFrame{
 		private Range lastXRange;
 		private Range lastYRange;
 		private DefaultTableModel model;
+		private DefaultTableModel stats;
 		private JTable table;
 		private LegendTitle legend;
 		private static ArrayList<String> history;
@@ -154,6 +155,7 @@ public class Charts extends ApplicationFrame{
 		private static double maxX = 0;
 		private static double minY = 0;
 		private static double maxY = 0;
+		private static int totalNumberOfContigs = 0;
 		private static double minFoundEValue= 0;
 		private static final int numOfBuckets = 200;
 		private static String header = "";
@@ -177,8 +179,8 @@ public class Charts extends ApplicationFrame{
 
 			ChartPanel chartPanel = (ChartPanel) createMainPanel();
 			chartPanel.setPreferredSize(new java.awt.Dimension(700, 500));
-			
-			
+
+
 			add(chartPanel);
 
 
@@ -249,7 +251,7 @@ public class Charts extends ApplicationFrame{
 				Color paintMe = colors[i];
 				if (taxaForDisplay.get(i).equals("Not annotated"))
 				{
-					 paintMe = Color.LIGHT_GRAY;
+					paintMe = Color.LIGHT_GRAY;
 				}
 				r.setSeriesPaint(i, paintMe);
 				yRenderer.setSeriesPaint(i, paintMe);
@@ -293,20 +295,25 @@ public class Charts extends ApplicationFrame{
 
 
 
-
 		private JPanel createStatsPanel()
 		{
 			JPanel statsPanel = new JPanel(new BorderLayout());
-			JPanel stable = new JPanel();
-			DefaultTableModel stats = new DefaultTableModel(new String [] {"Statistic", "Value"}, 0);
-			JTable statsTable = new JTable(stats);
-			statsTable.setPreferredSize(new Dimension(300,300));
-			stable.setBorder(BorderFactory.createCompoundBorder(new TitledBorder("Visible contigs: "), new EmptyBorder(4,4,4,4)));
-			stable.add(statsTable, BorderLayout.CENTER);
-			statistics(contigSet, stats);
-			JSplitPane split = new JSplitPane(1);
 
-			split.add(stable);
+
+			this.stats = new DefaultTableModel(new String [] {"Statistic", "Value"}, 0);
+			JTable statsTable = new JTable(this.stats);
+			JPanel visibleStats = new JPanel();
+			JScrollPane statsScroller = new JScrollPane(statsTable);
+			visibleStats.add(statsScroller);
+			//statsTable.setPreferredSize(new Dimension(300,300));
+			visibleStats.setBorder(BorderFactory.createCompoundBorder(new TitledBorder("Visible contigs: "), new EmptyBorder(4,4,4,4)));
+			//stable.add(statsTable, BorderLayout.CENTER);
+			JSplitPane split = new JSplitPane(1);
+			split.add(visibleStats);
+			statistics(contigSet, this.stats);
+
+
+
 			this.model = new DefaultTableModel(new String[] { "S. Statistic:", "S. Value:" }, 0);
 
 			this.table = new JTable(this.model);
@@ -384,8 +391,8 @@ public class Charts extends ApplicationFrame{
 			buttonPanel.add(submit);
 			taxPanel.add(buttonPanel);
 			 */
-			
-			
+
+
 			return taxPanel;
 		}
 
@@ -485,7 +492,7 @@ public class Charts extends ApplicationFrame{
 					{
 						taxaIndex = taxComboBox.getSelectedIndex();
 						history.add( "Taxa index changed to: " + taxaNames[taxaIndex] + "at index: " + taxaIndex);
-						updateClassifications();
+						//updateClassifications();
 					}
 					if(covComboBox.getSelectedIndex() != covLibraryIndex)
 					{
@@ -494,7 +501,7 @@ public class Charts extends ApplicationFrame{
 					}
 
 					update();
-					
+
 				}
 			});
 
@@ -505,12 +512,13 @@ public class Charts extends ApplicationFrame{
 				public void actionPerformed(ActionEvent e)
 				{
 
-					readFile();					
+					restart();
+					
 				}
 			});
 			buttonPanel.add(reload);
 			buttonPanel.add(submit);
-			
+
 			//Two check buttons to change how side panels are viewed
 			JPanel checkBoxPanel = new JPanel();
 			JCheckBox yPercentage = new JCheckBox("Show coverage graph as numerical count");
@@ -521,7 +529,7 @@ public class Charts extends ApplicationFrame{
 				{
 					StackedXYBarRenderer plotRenderer =  (StackedXYBarRenderer) ((XYPlot) ySubChart.getPlot()).getRenderer();
 					plotRenderer.setRenderAsPercentages(!yPercentage.isSelected());
-					 ((XYPlot) ySubChart.getPlot()).setRenderer(plotRenderer);
+					((XYPlot) ySubChart.getPlot()).setRenderer(plotRenderer);
 				}
 			});
 			checkBoxPanel.add(yPercentage);
@@ -541,36 +549,22 @@ public class Charts extends ApplicationFrame{
 			filterPanel.add(buttonPanel);
 			return filterPanel;
 		}
-
-		private void updateClassifications()
+		
+		private void restart()
 		{
-
-			contigByTaxa.clear();
-			taxLevelSpan.clear();
-			ArrayList<Contig> temp ;
-
-			for(int i = 0; i < contigSet.size(); i ++)
-			{
-
-				if(contigByTaxa.containsKey(contigSet.get(i).getTax()[taxaIndex]))
-				{
-					temp = contigByTaxa.get(contigSet.get(i).getTax()[taxaIndex]);
-					temp.add(contigSet.get(i));
-					contigByTaxa.put(contigSet.get(i).getTax()[taxaIndex], temp);
-					Integer current = taxLevelSpan.get(contigSet.get(i).getTax()[taxaIndex]);
-					current += contigSet.get(i).getLen();
-					taxLevelSpan.put(contigSet.get(i).getTax()[taxaIndex], current);
-				}
-
-				else
-				{
-					temp = new ArrayList<Contig>();
-					temp.add(contigSet.get(i));
-					contigByTaxa.put(contigSet.get(i).getTax()[taxaIndex], temp);
-					taxLevelSpan.put(contigSet.get(i).getTax()[taxaIndex], contigSet.get(i).getLen());
-				}
-			}
+			readFile();
+			getTaxaForDisplay();
+			XYSeriesCollection newScatterData = createDataset();
+			//createMainPanel();
+			((XYPlot) this.mainChart.getPlot()).setDataset(newScatterData);
+			DefaultTableXYDataset newXDataset = createXDataset();
+			((XYPlot) this.xSubChart.getPlot()).setDataset(newXDataset);
+			DefaultTableXYDataset newYDataset = createYDataset();
+			((XYPlot) this.ySubChart.getPlot()).setDataset(newYDataset);
+			statistics(contigSet, this.stats);
 		}
+
+		
 
 		private JPanel createExportPanel() 
 		{
@@ -784,7 +778,7 @@ public class Charts extends ApplicationFrame{
 			this.mainChart = createChart(xydataset, datasetExtension);
 			this.mainChart.addChangeListener(this);
 			XYPlot plot = (XYPlot) this.mainChart.getPlot();
-			
+
 			this.dataset = (XYSeriesCollection) plot.getDataset();
 			ChartPanel panel = new ChartPanel(this.mainChart);
 			panel.setFillZoomRectangle(true);
@@ -847,7 +841,7 @@ public class Charts extends ApplicationFrame{
 			yAxis.setUpperMargin(0.0);
 			plot.setRangeAxis(yAxis);
 
-			
+
 			legend = new LegendTitle(plot);
 
 			event.addChangeListener(plot);
@@ -868,15 +862,17 @@ public class Charts extends ApplicationFrame{
 			minCov = this.covJSlider.getValue();
 
 			history.add( "Minumum coverage changed to: " + minCov);
-			updateDataset();
+			reReadFile();
+			//updateDataset();
 			getTaxaForDisplay();
 			XYSeriesCollection newScatterData = createDataset();
-			this.dataset = newScatterData;
+			//createMainPanel();
 			((XYPlot) this.mainChart.getPlot()).setDataset(newScatterData);
 			DefaultTableXYDataset newXDataset = createXDataset();
 			((XYPlot) this.xSubChart.getPlot()).setDataset(newXDataset);
 			DefaultTableXYDataset newYDataset = createYDataset();
 			((XYPlot) this.ySubChart.getPlot()).setDataset(newYDataset);
+			statistics(contigSet, this.stats);
 
 		}
 
@@ -1223,7 +1219,7 @@ public class Charts extends ApplicationFrame{
 			display.addRow(new Object[] {"Median length: ", new Double(medianLen)});
 			display.addRow(new Object[] {"Mean GC: ", new Double(meanGC)});
 			display.addRow(new Object[] {"Span: ", selectedSpan});
-			display.addRow(new Object[] {"Number of contigs: ", new Integer(number)});
+			display.addRow(new Object[] {"N0. of contigs displayed/ Total: ", number + "/" + totalNumberOfContigs });
 			display.addRow(new Object[] {"N50: ", new Integer(n50)}); 
 			display.addRow(new Object[] {"", }); 
 			display.addRow(new Object[] {"Span breakdown: ", "Taxa/Selection"}); 
@@ -1338,6 +1334,166 @@ public class Charts extends ApplicationFrame{
 				}
 			}
 		}
+		/*
+		private void rePopulateHashMaps()
+		{
+			contigByTaxa.clear();
+			taxLevelSpan.clear();
+			ArrayList<Contig> temp;
+			for(int i = 0; i < contigSet.size(); i ++)
+			{
+				if(contigSet.get(i).isVisible() && contigSet.get(i).getLen() >= minContigLength && contigSet.get(i).getCov()[covLibraryIndex] >= minCov )
+				{
+					if(contigSet.get(i).getEValue() < maxEValue)
+					{
+						//still annotated as being part of original taxa
+						if(!contigSet.get(i).getIsNotAnnotated())
+						{
+							if(contigByTaxa.containsKey(contigSet.get(i).getTax()[taxaIndex]))
+							{
+								temp = contigByTaxa.get(contigSet.get(i).getTax()[taxaIndex]);
+								temp.add(contigSet.get(i));
+								contigByTaxa.put(contigSet.get(i).getTax()[taxaIndex], temp);
+								Integer tempInt = taxLevelSpan.get(contigSet.get(i).getTax()[taxaIndex]);
+								tempInt += contigSet.get(i).getLen();
+								taxLevelSpan.put(contigSet.get(i).getTax()[taxaIndex], tempInt);
+							}
+							else
+							{
+								temp = new ArrayList<Contig>();
+								temp.add(contigSet.get(i));
+								contigByTaxa.put(contigSet.get(i).getTax()[taxaIndex], temp);
+								taxLevelSpan.put(contigSet.get(i).getTax()[taxaIndex], contigSet.get(i).getLen());
+							}
+						}
+						//move to annotated
+						else
+						{
+							contigSet.get(i).setIsNotAnnotated()
+						}
+						{
+
+						}
+					}
+
+				}
+
+
+			}
+		}
+		 */
+		public static boolean reReadFile()
+		{
+			System.out.println("in re-readfile");
+			long start = System.nanoTime();
+			contigByTaxa.clear();
+			taxLevelSpan.clear();
+			contigSet.clear();
+			BufferedReader bufferedReader = null;
+			boolean correct = true;
+			try 
+			{
+				bufferedReader = new BufferedReader(new FileReader(file));
+				header = bufferedReader.readLine();
+
+				String text;
+				boolean add = true;
+				while ((text = bufferedReader.readLine()) != null) 
+				{
+					String tax = "";
+					add = true;
+					Contig addMe = parseContig(text, defaultEValue);
+					if (addMe == null)
+					{
+						System.out.println("Unable to parseContig");
+						add = false;
+					}
+					else
+					{	
+
+						if(addMe.getLen() >= minContigLength && addMe.getCov()[covLibraryIndex] >= minCov && addMe.getEValue() < maxEValue)
+						{
+							tax = addMe.getTax()[taxaIndex];
+							System.out.println("in first else");
+						}
+						else if (addMe.getLen() >= minContigLength && addMe.getCov()[covLibraryIndex] >= minCov && addMe.getEValue() >=  maxEValue)
+						{
+							tax = "Not annotated";
+							System.out.println("In ifelse");
+						}
+						else
+						{
+							tax = "";
+							add = false;
+							addMe.setVisibility(false);
+						}
+					}
+
+					if(addMe.isVisible())
+					{
+						System.out.println("********adding contigs");
+						contigSet.add(addMe); //add Contig to Arraylist
+						if(tax.equals(""))
+							System.out.println("Error in sorting");
+						totalLength += addMe.getLen();
+						//find smallest evalue in data
+						if(minFoundEValue > addMe.getEValue())
+						{
+							minFoundEValue= addMe.getEValue();
+						}
+
+						if(maxCov < addMe.getCov()[covLibraryIndex])
+						{
+							maxCov = addMe.getCov()[covLibraryIndex];
+						}
+						if(contigByTaxa.containsKey(tax))//Key already exists in Map, default for phylum
+						{
+							ArrayList<Contig> temp = contigByTaxa.get(tax);
+							temp.add(addMe);
+							contigByTaxa.put(tax, temp);
+							taxLevelSpan.put(tax,taxLevelSpan.get(tax) + addMe.getLen());
+
+						}
+						else
+						{
+							ArrayList<Contig> temp = new ArrayList<Contig>();
+							temp.add(addMe);
+							contigByTaxa.put(tax,  temp);
+							taxLevelSpan.put(tax, addMe.getLen());
+						}
+					}
+				}
+				System.out.println("******Size of contigSet: " + contigSet.size());
+			} 
+
+			catch (FileNotFoundException ex) 
+			{
+				correct = false;
+				Logger.getLogger(Test.class.getName()).log(Level.SEVERE, null, ex);
+			} 
+			catch (IOException ex) 
+			{
+				correct = false;
+				Logger.getLogger(Test.class.getName()).log(Level.SEVERE, null, ex);
+			} 
+			finally 
+			{
+				try 
+				{
+					bufferedReader.close();
+				} 
+				catch (IOException ex)
+				{
+					correct = false;
+					Logger.getLogger(Test.class.getName()).log(Level.SEVERE, null, ex);
+				}
+			} 
+			long end = System.nanoTime();
+			long difference = end - start;
+			System.out.println("re-read time: " +(difference));
+			return correct;
+		}
+
 
 		/*
 		 * Reads file passed in from JavaFX scene in Test.java
@@ -1405,6 +1561,7 @@ public class Charts extends ApplicationFrame{
 				history.add("Initial default E-Value: " + defaultEValue);
 				history.add("Initial taxonomic level: " + taxaNames[taxaIndex]);
 				history.add("Initial coverage library: " + covLibraryNames[covLibraryIndex]);
+				totalNumberOfContigs = contigSet.size();
 			} 
 			catch (FileNotFoundException ex) 
 			{
@@ -1660,7 +1817,6 @@ public class Charts extends ApplicationFrame{
 
 			XYDatasetSelectionExtension ext = (XYDatasetSelectionExtension)event.getSelectionExtension();
 			DatasetIterator itr = ext.getSelectionIterator(true);
-			//XYPlot plot = (XYPlot) chart.getPlot();
 
 			ArrayList<Contig> selected = new ArrayList<Contig>();
 			while(itr.hasNext())
@@ -1669,6 +1825,7 @@ public class Charts extends ApplicationFrame{
 				Comparable seriesKey = this.dataset.getSeriesKey(dc.series);
 				ArrayList<Contig> taxa = contigByTaxa.get(seriesKey);
 				selected.add(taxa.get(dc.item));
+				System.out.println("series key " + seriesKey);
 			}
 			System.out.println("size of selected: " + selected.size());
 			statistics(selected, this.model);
