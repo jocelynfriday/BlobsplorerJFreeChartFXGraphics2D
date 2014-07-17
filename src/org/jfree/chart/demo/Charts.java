@@ -28,6 +28,7 @@ import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -58,6 +59,7 @@ import javax.swing.border.TitledBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.table.DefaultTableModel;
+
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.ChartTheme;
@@ -156,6 +158,8 @@ public class Charts extends ApplicationFrame{
 		private static String header = "";
 		private static String[] taxaNames;
 		private static String [] covLibraryNames;
+		private static final Color [] basicColors = {Color.RED, Color.BLUE, Color.YELLOW, Color.CYAN, Color.MAGENTA, Color.GREEN, Color.PINK, Color.ORANGE, new Color(199,21,133), new Color(72,209,204), new Color(46,139,87), 
+			new Color(0,128,128), new Color(128,0,128), new Color(47,79,79), new Color(0,0,128), new Color(138,43,226), new Color(199,21,133), new Color(0,255,0), new Color(220,20,60), new Color(216,191,216), new Color(255,215,0), new Color(0,100,0), new Color(186,85,211), new Color(255,140,0) };
 
 		private static ArrayList<String> taxaForDisplay;
 
@@ -193,7 +197,7 @@ public class Charts extends ApplicationFrame{
 			XYPlot plot = new XYPlot(yDataset, yDomainAxis, yRange,stackedR);
 			plot.getDomainAxis().setLowerMargin(0.0);
 			plot.getDomainAxis().setUpperMargin(0.0);
-			plot.setDomainAxisLocation(AxisLocation.BOTTOM_OR_RIGHT);
+			plot.setDomainAxisLocation(AxisLocation.TOP_OR_LEFT);
 			plot.setOrientation(PlotOrientation.HORIZONTAL);
 			this.ySubChart = new JFreeChart(plot);
 			this.ySubChart.removeLegend();
@@ -234,8 +238,7 @@ public class Charts extends ApplicationFrame{
 			lengthPanel.setPreferredSize(new Dimension(200,200));
 
 
-			XYItemRenderer main = ((XYPlot) chartPanel.getChart().getPlot()).getRenderer();
-
+			  chartPanel.getChart().removeLegend();
 
 			//panel for layout
 			JPanel spacing = new JPanel();
@@ -301,6 +304,7 @@ public class Charts extends ApplicationFrame{
 
 		private JPanel createTaxonomyPanel()
 		{
+			JPanel grandTaxPanel = new JPanel();
 			JPanel taxPanel = new JPanel();
 			taxPanel.setLayout(new BoxLayout(taxPanel, BoxLayout.Y_AXIS));
 			JPanel titlePanel = new JPanel();
@@ -337,7 +341,14 @@ public class Charts extends ApplicationFrame{
 				});
 				checkBoxPanel.add(box);
 			}
+
+
 			taxPanel.add(checkBoxPanel);
+			JSplitPane split = new JSplitPane(1);
+			split.add(taxPanel);
+			JPanel legendPanel = new JPanel();
+			legend.setFrame(new BlockBorder());
+			//legendPanel.add(legend);
 
 			/*
 			JPanel buttonPanel = new JPanel();
@@ -353,6 +364,8 @@ public class Charts extends ApplicationFrame{
 			buttonPanel.add(submit);
 			taxPanel.add(buttonPanel);
 			 */
+			
+			
 			return taxPanel;
 		}
 
@@ -440,6 +453,7 @@ public class Charts extends ApplicationFrame{
 
 			filterPanel.add(pullDown);
 
+			JPanel buttonPanel = new JPanel();
 			JButton submit = new JButton("Submit");
 			submit.setMnemonic(KeyEvent.VK_ENTER);
 			submit.addActionListener(new ActionListener()
@@ -473,8 +487,36 @@ public class Charts extends ApplicationFrame{
 					readFile();					
 				}
 			});
-			filterPanel.add(reload);
-			filterPanel.add(submit);
+			buttonPanel.add(reload);
+			buttonPanel.add(submit);
+			
+			JPanel checkBoxPanel = new JPanel();
+			JCheckBox yPercentage = new JCheckBox("Show coverage graph as numerical count");
+			yPercentage.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e)
+				{
+					StackedXYBarRenderer plotRenderer =  (StackedXYBarRenderer) ((XYPlot) ySubChart.getPlot()).getRenderer();
+					plotRenderer.setRenderAsPercentages(!yPercentage.isSelected());
+					 ((XYPlot) ySubChart.getPlot()).setRenderer(plotRenderer);
+				}
+			});
+			checkBoxPanel.add(yPercentage);
+			JCheckBox xPercentage = new JCheckBox("Show GC content as numerical counts");
+			xPercentage.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e)
+				{
+					StackedXYBarRenderer plotRenderer =  (StackedXYBarRenderer) ((XYPlot) xSubChart.getPlot()).getRenderer();
+					plotRenderer.setRenderAsPercentages(!xPercentage.isSelected());
+					((XYPlot)xSubChart.getPlot()).setRenderer(plotRenderer);
+				}
+			});
+			checkBoxPanel.add(xPercentage);
+			filterPanel.add(checkBoxPanel);
+			filterPanel.add(buttonPanel);
 			return filterPanel;
 		}
 
@@ -720,6 +762,11 @@ public class Charts extends ApplicationFrame{
 			this.mainChart = createChart(xydataset, datasetExtension);
 			this.mainChart.addChangeListener(this);
 			XYPlot plot = (XYPlot) this.mainChart.getPlot();
+			Color [] colors = createColorArray();
+			for(int i = 0; i < taxaForDisplay.size(); i ++)
+			{
+				//plot.setSelectionPaint()
+			}
 			this.dataset = (XYSeriesCollection) plot.getDataset();
 			ChartPanel panel = new ChartPanel(this.mainChart);
 			panel.setFillZoomRectangle(true);
@@ -782,18 +829,8 @@ public class Charts extends ApplicationFrame{
 			yAxis.setUpperMargin(0.0);
 			plot.setRangeAxis(yAxis);
 
-			/*
-			legend = new LegendTitle(chart.getPlot());
-			BlockContainer wrapper = new BlockContainer(new BorderArrangement());
-			wrapper.setFrame(new BlockBorder(1.0, 1.0, 1.0, 1.0));
-			LabelBlock title = new LabelBlock("Legend Items:" );
-			title.setPadding(5,5,5,5);
-			wrapper.add(title, RectangleEdge.TOP);
-			BlockContainer items = legend.getItemContainer();
-			items.setPadding(2, 10, 5, 2);
-			wrapper.add(items);
-			legend.setWrapper(wrapper);
-			 */
+			
+			legend = new LegendTitle(plot);
 
 			event.addChangeListener(plot);
 			return chart;
@@ -1052,7 +1089,7 @@ public class Charts extends ApplicationFrame{
 			{
 				System.out.println(sorted.get(i));
 			}
-			*/
+			 */
 			if(sorted.size() == 1)
 				return sorted.get(0)*1.0;
 			else if (sorted.size() == 2)
@@ -1459,6 +1496,25 @@ public class Charts extends ApplicationFrame{
 			contigToAdd = new Contig(id, len, gc, cov, tax, eValue);
 
 			return contigToAdd;
+		}
+
+		private Color [] createColorArray()
+		{
+			Color [] paint;
+
+			if (basicColors.length >= taxaForDisplay.size())
+				paint = Arrays.copyOfRange(basicColors, 0, taxaForDisplay.size());
+			else
+			{
+				paint = new Color[taxaForDisplay.size()];
+				for(int i = 0; i < taxaForDisplay.size(); i ++)
+				{
+					int index = i%basicColors.length;
+					paint[i] = basicColors[index];
+				}
+			}
+
+			return paint;
 		}
 
 		private static double [] segregateByBucket(ArrayList<Contig> series, int numBins, double splitFactor, int category)
