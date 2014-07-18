@@ -132,10 +132,11 @@ public class Charts extends ApplicationFrame{
 		private Range lastYRange;
 		private DefaultTableModel model;
 		private DefaultTableModel stats;
+		private ChartPanel chartPanel;
 		private JTable table;
 		private LegendTitle legend;
 		private static ArrayList<String> history;
-		private Color [] colors;
+		private HashMap<String, Color>  colors;
 
 
 		private static File file;
@@ -177,7 +178,7 @@ public class Charts extends ApplicationFrame{
 			getTaxaForDisplay();
 			colors = createColorArray();
 
-			ChartPanel chartPanel = (ChartPanel) createMainPanel();
+			chartPanel = (ChartPanel) createMainPanel();
 			chartPanel.setPreferredSize(new java.awt.Dimension(700, 500));
 
 
@@ -248,15 +249,13 @@ public class Charts extends ApplicationFrame{
 
 			for(int i = 0; i < taxaForDisplay.size(); i ++)
 			{
-				Color paintMe = colors[i];
-				if (taxaForDisplay.get(i).equals("Not annotated"))
-				{
-					paintMe = Color.LIGHT_GRAY;
-				}
+				Color paintMe = colors.get(taxaForDisplay.get(i));
+
 				r.setSeriesPaint(i, paintMe);
 				yRenderer.setSeriesPaint(i, paintMe);
 				xRenderer.setSeriesPaint(i, paintMe);
 			}
+
 			((XYPlot) chartPanel.getChart().getPlot()).setRenderer(r);
 			((XYPlot) xSubChart.getPlot()).setRenderer(xRenderer);
 			((XYPlot) ySubChart.getPlot()).setRenderer(yRenderer);
@@ -513,7 +512,7 @@ public class Charts extends ApplicationFrame{
 				{
 
 					restart();
-					
+
 				}
 			});
 			buttonPanel.add(reload);
@@ -549,9 +548,12 @@ public class Charts extends ApplicationFrame{
 			filterPanel.add(buttonPanel);
 			return filterPanel;
 		}
-		
+
 		private void restart()
 		{
+			maxEValue = 1;
+			minContigLength = 0;
+			minCov = defaultMinCov;
 			readFile();
 			getTaxaForDisplay();
 			XYSeriesCollection newScatterData = createDataset();
@@ -564,7 +566,7 @@ public class Charts extends ApplicationFrame{
 			statistics(contigSet, this.stats);
 		}
 
-		
+
 
 		private JPanel createExportPanel() 
 		{
@@ -866,12 +868,36 @@ public class Charts extends ApplicationFrame{
 			//updateDataset();
 			getTaxaForDisplay();
 			XYSeriesCollection newScatterData = createDataset();
-			//createMainPanel();
 			((XYPlot) this.mainChart.getPlot()).setDataset(newScatterData);
 			DefaultTableXYDataset newXDataset = createXDataset();
 			((XYPlot) this.xSubChart.getPlot()).setDataset(newXDataset);
 			DefaultTableXYDataset newYDataset = createYDataset();
 			((XYPlot) this.ySubChart.getPlot()).setDataset(newYDataset);
+
+			XYItemRenderer r = ((XYPlot) this.mainChart.getPlot()).getRenderer();
+			StackedXYBarRenderer yRenderer =  (StackedXYBarRenderer) ((XYPlot) ySubChart.getPlot()).getRenderer();
+			StackedXYBarRenderer xRenderer =  (StackedXYBarRenderer) ((XYPlot) xSubChart.getPlot()).getRenderer();
+
+			for(int i = 0; i < taxaForDisplay.size(); i ++)
+			{
+				Color paintMe = colors.get(taxaForDisplay.get(i));
+
+				r.setSeriesPaint(i, paintMe);
+				yRenderer.setSeriesPaint(i, paintMe);
+				xRenderer.setSeriesPaint(i, paintMe);
+			}
+
+			((XYPlot) this.mainChart.getPlot()).setRenderer(r);
+			this.dataset = (XYSeriesCollection) ((XYPlot) this.mainChart.getPlot()).getDataset();
+			DatasetSelectionExtension<XYCursor> datasetExtension = new XYDatasetSelectionExtension(newScatterData);
+
+			datasetExtension.addChangeListener(this);
+		    DatasetExtensionManager dExManager = new DatasetExtensionManager();
+		    dExManager.registerDatasetExtension(datasetExtension);
+		    chartPanel.setSelectionManager(new EntitySelectionManager(chartPanel, new Dataset[] { newScatterData }, dExManager));
+
+			((XYPlot) xSubChart.getPlot()).setRenderer(xRenderer);
+			((XYPlot) ySubChart.getPlot()).setRenderer(yRenderer);
 			statistics(contigSet, this.stats);
 
 		}
@@ -879,8 +905,16 @@ public class Charts extends ApplicationFrame{
 		private static void getTaxaForDisplay()
 		{
 			System.out.println("in getTaxaForDisplay");
-			ArrayList<String> topTaxa = getTopTaxa();
-			taxaForDisplay = sortBySpan(topTaxa);
+			//ArrayList<String> topTaxa = getTopTaxa();
+			ArrayList<String> temp = new ArrayList<String>();
+			temp.addAll(contigByTaxa.keySet());
+			taxaForDisplay = sortBySpan(temp);
+
+			System.out.println("Check order");
+			for(int i = 0; i < taxaForDisplay.size(); i ++)
+			{
+				System.out.println(taxaForDisplay.get(i) + "\t" + taxLevelSpan.get(taxaForDisplay.get(i)));
+			}
 		}
 
 		/*
@@ -962,24 +996,8 @@ public class Charts extends ApplicationFrame{
 			}
 			return dataset;
 		}
-		//**Should I create a treeMap to ease sorting?
-		/*
-		 * Selects top x number (taxaLevel) of taxa to be displayed in chart.
-		 * Iterates through contigByTaxa and sorts the keys based on the number of contigs belonging to a given taxa
-		 * (i.e. sorts the keys of the map based on the length of the value's ArrayList) and truncates result if necessary
-		 */
-		private static ArrayList<String> getTopTaxa()
-		{
-			System.out.println("in getTopTaxa");
-			ArrayList <String> topTaxa = new ArrayList<String> ();
-			Iterator<String> itr = contigByTaxa.keySet().iterator();	
-			while(itr.hasNext())
-			{
-				String key = itr.next();
-				topTaxa = sortTaxa(key,topTaxa);
-			}
-			return topTaxa; 
-		}
+
+
 
 		/*
 		 * Returns an ArrayList of Taxa sorted by their span
@@ -1233,107 +1251,9 @@ public class Charts extends ApplicationFrame{
 
 		}
 
-		private static void updateDataset()
-		{
-			System.out.println("in updateVisible");
-			boolean changedLength;
-			boolean changedCov;
-			for(int i = 0; i < contigSet.size(); i ++)
-			{
-				//Update visibility based on contig length
-				if (contigSet.get(i).getLen() < minContigLength) // contig below min lenght to be displayed
-				{
-					changedLength = contigSet.get(i).setVisibility(false);
-					if(changedLength) //if visibility goes from visible to hidden, indicate positive removal
-					{
-						remove (contigSet.get(i));
-					}
-				}
-				else
-				{
-					changedLength = contigSet.get(i).setVisibility(true);
-					if(!changedLength) //Contig made visible from change
-					{
-						add(contigSet.get(i), contigSet.get(i).getTax()[taxaIndex]);
-					}
-				}
 
-				//update annotation based on E-Value cutoff 
-				//If contig's eValue is above eValue threshold, remove from it's current location and add to not annotated
-				String taxa = "Not annotated"; 
-				if(contigSet.get(i).getEValue() > maxEValue)
-				{
 
-					if (!contigSet.get(i).getTax()[taxaIndex].equals(taxa)) // only moves contig if it is currently annotated 
-					{
 
-						remove(contigSet.get(i));
-						add(contigSet.get(i), taxa);
-						contigSet.get(i).setIsNotAnnotated(true);
-					}
-				}
-				else //return to original taxa
-				{
-					if(contigSet.get(i).getIsNotAnnotated())
-					{
-						remove(contigSet.get(i));
-						add(contigSet.get(i), contigSet.get(i).getTax()[taxaIndex]);
-						contigSet.get(i).setIsNotAnnotated(false);
-					}
-				}
-
-				if(contigSet.get(i).getCov()[covLibraryIndex] < minCov)
-				{
-					changedCov = contigSet.get(i).setVisibility(false);
-					if(!changedCov )
-					{
-						remove(contigSet.get(i));
-					}
-				}
-				else
-				{
-					changedCov = contigSet.get(i).setVisibility(true);
-					if(changedCov)
-					{
-						add(contigSet.get(i), contigSet.get(i).getTax()[taxaIndex]);
-					}
-				}
-			}
-		}
-
-		private static void add(Contig add, String taxa)
-		{
-			System.out.println("in add");
-			//update span calculation
-			add.setTaxaAtPosition(taxa, taxaIndex);
-			Integer updated = taxLevelSpan.get(taxa) + add.getLen();
-			taxLevelSpan.put(taxa, updated);
-			//add contig to contigByTaxa
-			ArrayList<Contig> temp = contigByTaxa.get(taxa);
-			temp.add(add);
-			contigByTaxa.put(taxa, temp);
-		}
-
-		/*
-		 * @param
-		 */
-		private static void remove(Contig remove)
-		{
-			System.out.println("in remove");
-			//remove.setTaxaAtPosition(taxa, taxaIndex);
-			//Update taxLevelSpan to remove length of contig
-			Integer updated = taxLevelSpan.get(remove.getTax()[taxaIndex]) - remove.getLen();
-			taxLevelSpan.put(remove.getTax()[taxaIndex], updated);
-			//loop through contigs associated to taxa and remove contig from hashMap
-			for(int j = 0; j < contigByTaxa.get(remove.getTax()[taxaIndex]).size(); j++)
-			{
-				if (contigByTaxa.get(remove.getTax()[taxaIndex]).get(j).getID().equals(remove.getID())) //based on assumption that contig IDs are unique
-				{
-					contigByTaxa.get(remove.getTax()[taxaIndex]).remove(j); // removes element from ArrayList associated with taxa key
-					return;
-				}
-			}
-		}
 		/*
 		private void rePopulateHashMaps()
 		{
@@ -1397,16 +1317,15 @@ public class Charts extends ApplicationFrame{
 				header = bufferedReader.readLine();
 
 				String text;
-				boolean add = true;
 				while ((text = bufferedReader.readLine()) != null) 
 				{
 					String tax = "";
-					add = true;
+
 					Contig addMe = parseContig(text, defaultEValue);
 					if (addMe == null)
 					{
 						System.out.println("Unable to parseContig");
-						add = false;
+
 					}
 					else
 					{	
@@ -1424,7 +1343,7 @@ public class Charts extends ApplicationFrame{
 						else
 						{
 							tax = "";
-							add = false;
+
 							addMe.setVisibility(false);
 						}
 					}
@@ -1674,8 +1593,9 @@ public class Charts extends ApplicationFrame{
 			return contigToAdd;
 		}
 
-		private Color [] createColorArray()
+		private HashMap<String, Color> createColorArray()
 		{
+			HashMap<String, Color> taxaByColor = new HashMap<String, Color>();
 			Color [] paint;
 
 			if (basicColors.length >= taxaForDisplay.size())
@@ -1689,8 +1609,18 @@ public class Charts extends ApplicationFrame{
 					paint[i] = basicColors[index];
 				}
 			}
-
-			return paint;
+			for(int i = 0; i < taxaForDisplay.size(); i ++)
+			{
+				if(taxaForDisplay.get(i).equals("Not annotated"))
+				{
+					taxaByColor.put("Not annotated", Color.LIGHT_GRAY);
+				}
+				else
+				{
+					taxaByColor.put(taxaForDisplay.get(i), paint[i]);
+				}
+			}
+			return taxaByColor;
 		}
 
 		private static double [] segregateByBucket(ArrayList<Contig> series, int numBins, double splitFactor, int category)
@@ -1809,6 +1739,7 @@ public class Charts extends ApplicationFrame{
 		@Override
 		public void selectionChanged(SelectionChangeEvent<XYCursor> event) 
 		{
+			System.out.println("In selection Changed");
 			long start = System.nanoTime();
 			while(this.model.getRowCount() > 0)
 			{
@@ -1821,6 +1752,7 @@ public class Charts extends ApplicationFrame{
 			ArrayList<Contig> selected = new ArrayList<Contig>();
 			while(itr.hasNext())
 			{
+				System.out.println("In itr.hasNext()");	
 				XYCursor dc = (XYCursor)itr.next();
 				Comparable seriesKey = this.dataset.getSeriesKey(dc.series);
 				ArrayList<Contig> taxa = contigByTaxa.get(seriesKey);
@@ -1828,7 +1760,8 @@ public class Charts extends ApplicationFrame{
 				System.out.println("series key " + seriesKey);
 			}
 			System.out.println("size of selected: " + selected.size());
-			statistics(selected, this.model);
+			if(selected.size() > 0)
+				statistics(selected, this.model);
 			long end = System.nanoTime();
 			System.out.println("Elapsed time of selection and statistics: " + (end - start));
 
