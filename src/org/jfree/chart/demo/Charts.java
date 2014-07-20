@@ -343,12 +343,14 @@ public class Charts extends ApplicationFrame{
 			GridLayout grid = new GridLayout(half, 1);
 
 			checkBoxPanel.setLayout(grid);
-
+		
 			for(int i = taxaForDisplay.size()-1; i >= 0; i --)
 			{
 				String name = taxaForDisplay.get(i);
 				JCheckBox box = new JCheckBox(name, true);
-				box.setActionCommand(taxaForDisplay.get(i));
+				final int series = updateCount(i);
+				box.setActionCommand(name);
+			
 				box.addActionListener(new ActionListener()
 				{
 					XYItemRenderer renderer = ((XYPlot) mainChart.getPlot()).getRenderer();
@@ -358,12 +360,12 @@ public class Charts extends ApplicationFrame{
 						if(e.getActionCommand().equals(name))
 						{
 							System.out.println("In checked: " +  name);
-							// int series = i;
-							//boolean visible = this.renderer.getItemVisible(series, 0);
-							//this.renderer.setSeriesVisible(series, Boolean.valueOf(!visible));
+							
+							boolean visible = this.renderer.getItemVisible(series, 0);
+							this.renderer.setSeriesVisible(series, Boolean.valueOf(!visible));
 						}
 					}
-
+					
 				});
 				checkBoxPanel.add(box);
 			}
@@ -395,6 +397,10 @@ public class Charts extends ApplicationFrame{
 			return taxPanel;
 		}
 
+		private int updateCount(int current)
+		{
+			return current --;
+		}
 
 		public void itemStateChanged(ItemEvent ie)
 		{
