@@ -1,14 +1,10 @@
 package org.jfree.chart.demo;
 
-import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.Label;
-import java.awt.Paint;
 import java.awt.Rectangle;
 import java.awt.TextField;
 import java.awt.event.ActionEvent;
@@ -25,7 +21,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
@@ -48,7 +43,6 @@ import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
-import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -57,7 +51,6 @@ import javax.swing.JSlider;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
-import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.event.ChangeEvent;
@@ -69,47 +62,22 @@ import org.apache.batik.svggen.SVGGraphics2D;
 import org.apache.batik.svggen.SVGGraphics2DIOException;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
-import org.jfree.chart.ChartTheme;
-import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.AxisLocation;
 import org.jfree.chart.axis.LogAxis;
 import org.jfree.chart.axis.NumberAxis;
-import org.jfree.chart.axis.NumberTickUnit;
-import org.jfree.chart.block.BlockBorder;
-import org.jfree.chart.block.BlockContainer;
-import org.jfree.chart.block.BorderArrangement;
-import org.jfree.chart.block.LabelBlock;
 import org.jfree.chart.event.ChartChangeEvent;
 import org.jfree.chart.event.ChartChangeListener;
-//import org.jfree.chart.panel.selectionhandler.EntitySelectionManager;
-//import org.jfree.chart.panel.selectionhandler.FreePathSelectionHandler;
-//import org.jfree.chart.panel.selectionhandler.MouseClickSelectionHandler;
-//import org.jfree.chart.panel.selectionhandler.RectangularRegionSelectionHandler;
-//import org.jfree.chart.panel.selectionhandler.RegionSelectionHandler;
-
 import org.jfree.chart.panel.selectionhandler.EntitySelectionManager;
 import org.jfree.chart.panel.selectionhandler.MouseClickSelectionHandler;
 import org.jfree.chart.panel.selectionhandler.RectangularRegionSelectionHandler;
 import org.jfree.chart.panel.selectionhandler.RegionSelectionHandler;
-import org.jfree.chart.plot.Plot;
 import org.jfree.chart.plot.PlotOrientation;
-import org.jfree.chart.plot.ValueAxisPlot;
 import org.jfree.chart.plot.XYPlot;
-import org.jfree.chart.plot.Zoomable;
-import org.jfree.chart.renderer.category.BarRenderer;
-import org.jfree.chart.renderer.category.StandardBarPainter;
-import org.jfree.chart.renderer.item.IRSUtilities;
 import org.jfree.chart.renderer.xy.StackedXYBarRenderer;
 import org.jfree.chart.renderer.xy.StandardXYBarPainter;
-import org.jfree.chart.renderer.xy.StandardXYItemRenderer;
-import org.jfree.chart.renderer.xy.XYBarPainter;
-import org.jfree.chart.renderer.xy.XYBarRenderer;
-import org.jfree.chart.renderer.xy.XYDotRenderer;
 import org.jfree.chart.renderer.xy.XYItemRenderer;
 import org.jfree.chart.title.LegendTitle;
-import org.jfree.chart.ui.NumberCellRenderer;
-import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.data.Range;
 import org.jfree.data.extension.DatasetIterator;
 import org.jfree.data.extension.DatasetSelectionExtension;
@@ -127,9 +95,19 @@ import org.w3c.dom.DOMImplementation;
 import org.w3c.dom.Document;
 
 public class Charts extends ApplicationFrame{
-	static class BlobPanel extends DemoPanel implements ItemListener, ChangeListener, ChartChangeListener, KeyListener , SelectionChangeListener<XYCursor>
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+
+
+	public static class BlobPanel extends DemoPanel implements ItemListener, ChangeListener, ChartChangeListener, KeyListener , SelectionChangeListener<XYCursor>
 	{
-		//private XYDataset dataset;
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
 		private XYSeriesCollection dataset;
 		private JFreeChart mainChart;
 		private JFreeChart ySubChart;
@@ -153,29 +131,29 @@ public class Charts extends ApplicationFrame{
 		private static double defaultEValue;
 		private static ArrayList <Contig> contigSet = new ArrayList<Contig>();
 		private static int taxaIndex = 2;
-		private static int covLibraryIndex = 0; // which cov library to use //** needs to be added to UI
-		private static HashMap<String, ArrayList<Contig>> contigByTaxa = new HashMap<String, ArrayList<Contig>>();
-		private static HashMap <String, Integer> taxLevelSpan = new HashMap <String, Integer>();
-		private static int totalLength = 0;
-		private static double maxEValue = 1.0;
-		private static int minContigLength = 0;
-		private static double defaultMinCov = 1E-5;
-		private static double minCov;
-		private static double maxCov = 0;
-		private static double minX = 0;
-		private static double maxX = 0;
-		private static double minY = 0;
-		private static double maxY = 0;
-		private static int totalNumberOfContigs = 0;
-		private static double minFoundEValue= 0;
-		private static final int numOfBuckets = 200;
-		private static String header = "";
-		private static String[] taxaNames;
-		private static String [] covLibraryNames;
-		private static final Color [] basicColors = {Color.RED, Color.BLUE, Color.YELLOW, Color.CYAN, Color.MAGENTA, Color.GREEN, Color.PINK, Color.ORANGE, new Color(199,21,133), new Color(72,209,204), new Color(46,139,87), 
-			new Color(0,128,128), new Color(128,0,128), new Color(47,79,79), new Color(0,0,128), new Color(138,43,226), new Color(199,21,133), new Color(0,255,0), new Color(220,20,60), new Color(216,191,216), new Color(255,215,0), new Color(0,100,0), new Color(186,85,211), new Color(255,140,0) };
+		private static  int covLibraryIndex = 0; // which cov library to use //** needs to be added to UI
+		private static  HashMap<String, ArrayList<Contig>> contigByTaxa = new HashMap<String, ArrayList<Contig>>();
+		private static  HashMap <String, Integer> taxLevelSpan = new HashMap <String, Integer>();
+		private static  int totalLength = 0;
+		private static  double maxEValue = 1.0;
+		private static  int minContigLength = 0;
+		private static  double defaultMinCov = 1E-5;
+		private static  double minCov;
+		private static  double maxCov = 0;
+		private static  double minX = 0;
+		private static  double maxX = 0;
+		private static  double minY = 0;
+		private static  double maxY = 0;
+		private static  int totalNumberOfContigs = 0;
+		private static  double minFoundEValue= 0;
+		private  final int numOfBuckets = 200;
+		private static  String header = "";
+		private static  String[] taxaNames;
+		private static  String [] covLibraryNames;
+		private  final Color [] basicColors = {Color.RED, Color.BLUE, Color.YELLOW, Color.CYAN, Color.MAGENTA, Color.GREEN, Color.PINK, Color.ORANGE, new Color(199,21,133), new Color(72,209,204), new Color(46,139,87), 
+			new Color(0,128,128), new Color(128,0,128), new Color(47,79,79), new Color(0,0,128), new Color(138,43,226), new Color(199,21,133), new Color(0,255,0), new Color(220,20,60), new Color(216,191,216), new Color(255,215,0), new Color(0,100,0), new Color(186,85,211), new Color(255,140,0), new Color(153,0,76), new Color(204,255,255), new Color(153,255,204), new Color(255,204,153), new Color(204,153,255), new Color(51,0,102), new Color(0,76,153), new Color(255,0,127), new Color(0,102,102), new Color(102,0,51) };
 
-		private static ArrayList<String> taxaForDisplay;
+		private static  ArrayList<String> taxaForDisplay;
 
 		public BlobPanel(File file, int covLevel, double eValue)
 		{
@@ -220,7 +198,7 @@ public class Charts extends ApplicationFrame{
 			ySubChartPanel.setMinimumDrawWidth(0);
 			ySubChartPanel.setMinimumDrawHeight(0);
 
-			ySubChartPanel.setPreferredSize(new Dimension (200, 200));
+			ySubChartPanel.setPreferredSize(new Dimension (300, 200));
 
 			minEvaluePanel.add(ySubChartPanel);
 			//minEvaluePanel.setPreferredSize(new Dimension(200,250));
@@ -250,7 +228,7 @@ public class Charts extends ApplicationFrame{
 			ChartPanel lengthPanel = new ChartPanel(xSubChart);
 			lengthPanel.setMinimumDrawWidth(0);
 			lengthPanel.setMinimumDrawHeight(0);
-			lengthPanel.setPreferredSize(new Dimension(200,200));
+			lengthPanel.setPreferredSize(new Dimension(200,300));
 
 
 			XYItemRenderer r = ((XYPlot) chartPanel.getChart().getPlot()).getRenderer();
@@ -273,7 +251,7 @@ public class Charts extends ApplicationFrame{
 
 			//panel for layout
 			JPanel spacing = new JPanel();
-			spacing.setPreferredSize(new Dimension(200,10));
+			spacing.setPreferredSize(new Dimension(300,10));
 			minLengthPanel.add(spacing, BorderLayout.EAST);
 
 			minLengthPanel.add(lengthPanel);
@@ -307,7 +285,6 @@ public class Charts extends ApplicationFrame{
 		private JPanel createStatsPanel()
 		{
 			JPanel statsPanel = new JPanel(new BorderLayout());
-
 
 			this.stats = new DefaultTableModel(new String [] {"Statistic", "Value"}, 0);
 			JTable statsTable = new JTable(this.stats);
@@ -608,13 +585,17 @@ public class Charts extends ApplicationFrame{
 				public void actionPerformed(ActionEvent e)
 				{
 					String svgName = svgField.getText();
-					Writer out = null;
+					Writer outMain = null;
+					Writer outX = null;
+					Writer outY = null;
 					try 
 					{
-						
-						Path file = Paths.get(svgName);
+
+						Path fileSet = Paths.get(svgName);
+						Path fileX = Paths.get(svgName+"CG");
+						Path fileY = Paths.get(svgName +"COV");
 						//file already exists in location
-						if(Files.exists(file))
+						if(Files.exists(fileSet) || Files.exists(fileX) || Files.exists(fileY))
 						{
 							errorMessage.setText("File already exists");
 							System.out.println("FILE ALREADy exists");
@@ -627,16 +608,24 @@ public class Charts extends ApplicationFrame{
 							Document document = domImpl.createDocument(null, "svg", null);
 							SVGGraphics2D svgGenerator = new SVGGraphics2D(document);
 							svgGenerator.getGeneratorContext().setPrecision(6);
-							mainChart.draw(svgGenerator, new Rectangle2D.Double(0,0,400,300), null);
-							boolean useCSS = true;
-							
 
-							out = new java.io.OutputStreamWriter(new FileOutputStream(new File(svgName)));
-							svgGenerator.stream(out, false);
+							mainChart.draw(svgGenerator, new Rectangle2D.Double(0,0,700,500), null);
+							boolean useCSS = true;
+							outMain = new java.io.OutputStreamWriter(new FileOutputStream(new File(svgName+".svg")));
+							svgGenerator.stream(outMain, false );
+
+
+							xSubChart.draw(svgGenerator, new Rectangle2D.Double(0,0,700,300), null);
+							outX = new java.io.OutputStreamWriter(new FileOutputStream(new File(svgName + "GC.svg")));
+							svgGenerator.stream(outX, false);
+
+							ySubChart.draw(svgGenerator, new Rectangle2D.Double(0,0,500,300), null);
+							outY = new java.io.OutputStreamWriter(new FileOutputStream(new File(svgName + "COV.svg")));
+							svgGenerator.stream(outY, false);
 
 						}
 					} 
-					
+
 					catch (FileNotFoundException e1)
 					{
 						// TODO Auto-generated catch block
@@ -648,8 +637,12 @@ public class Charts extends ApplicationFrame{
 					finally
 					{
 						try {
-							if(out != null)
-							out.close();
+							if(outMain != null && outY != null && outX != null)
+							{
+								outMain.close();
+								outY.close();
+								outX.close();
+							}
 						} catch (IOException e1) {
 							// TODO Auto-generated catch block
 							e1.printStackTrace();
@@ -930,6 +923,15 @@ public class Charts extends ApplicationFrame{
 			}
 		}
 
+		/**
+		 * Returns a JFreeChart chart containing a scatter plot with the GC value on a numbered x axis and COV on a log scale y axis. The plot responds to zooming and panning, while allowing the dataset to respond to user selection of contigs.
+		 *  
+		 * @param dataset an XYSeriesCollection containing data to create scatter plot
+		 * @param event the data set extension mechanism to allow user selection
+		 * @return the JFreeChart scatter plot with selection listener
+		 * @see JFreeChart
+		 * @see ChartFactory
+		 */
 		private JFreeChart createChart(XYDataset dataset, DatasetSelectionExtension<XYCursor> event)
 		{
 			System.out.println("In createChart");
@@ -959,6 +961,33 @@ public class Charts extends ApplicationFrame{
 			return chart;
 		}
 
+		/**
+		 * Controls the how Blobsplorer responds to filtering actions requested by the user.  The update() achieves this by re-populating the central dataset accordingly according to the new parameters and by updating all references to this data. 
+		 * The user initiated changes are registered to the rest of the program through the global variables, minContigLength, maxEValue and minCov.  
+		 * Updates minContigLength, maxEValue and minCov are initiated in response to options available in  {@link createFilterPanel()}.  
+		 * Changes are retrieved from JSliders and used to alter which contigs are displayed and how they are classified (e.g. as Not annotated or as a given taxa provided by Blast).  For minContigLength and minContigLength, the new values are taken directly from the JSlider.  
+		 * In the case of the eValueJSlider, the integer number corresponds to the exponent value and the actual maximum E-Value accepted is calculated by raising 10 to the power of the number given from the JSlider.
+		 * In order to allow the program to promptly respond to changes in classification parameters, contigs are re-read in from the stored file and classified and/or excluded based on the values of minContigLength, minCov, and maxEValue.
+		 *
+		 * {@link reReadFile is called to re read in and parse the contigs from the file stored in memory, taking into account the new classifications factors provided by the user. {@link getTaxaForDisplay()} is called to sort the newly altered data set based on span. 
+
+		 * <p>
+		 *  Other updates include adding a record of all changes to the  history ArrayList, ensuring that the color of each taxa remains the same post re-classification and/or exclusion of taxa (i.e. the 'Not annotated' series that was colored as light grey before updates is still light grey after updates).
+		 *  Additionally, the 'Visible Statistics' panel in {@link createStatsPanel()}
+		 * 
+
+		 * @see JSlider  
+		 * @see JFreeChart
+		 * @see XYPlot
+		 * @see XYSeriesCollection
+		 * @see DefaultTableXYDataset
+		 * @see XYItemRenderer
+		 * @see StackedXYBarRenderer
+		 * @see DatasetSelectionExtension
+		 * @see ChartPanel
+		 * @see JCheckBox
+		 * 
+		 */
 		public void update ()
 		{
 			System.out.println("Update");
@@ -1014,14 +1043,13 @@ public class Charts extends ApplicationFrame{
 
 			//ensure taxonomy checkboxes change with data
 			checkBoxPanel.removeAll();
-
 			for(int i = taxaForDisplay.size()-1; i >= 0; i --)
 			{
 				String name = taxaForDisplay.get(i);
 				JCheckBox box = new JCheckBox(name, true);
 				final int series = updateCount(i);
 				box.setActionCommand(name);
-
+				//set action listener to respond to changes is JCheckBox selection.  
 				box.addActionListener(new ActionListener()
 				{
 					XYItemRenderer renderer = ((XYPlot) mainChart.getPlot()).getRenderer();
