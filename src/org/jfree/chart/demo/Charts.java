@@ -102,12 +102,13 @@ public class Charts extends ApplicationFrame{
 
 
 
-	public static class BlobPanel extends DemoPanel implements ItemListener, ChangeListener, ChartChangeListener, KeyListener , SelectionChangeListener<XYCursor>
+	public static class BlobPanel extends DemoPanel implements  ChangeListener, ChartChangeListener, KeyListener , SelectionChangeListener<XYCursor>
 	{
 		/**
 		 * 
 		 */
 		private static final long serialVersionUID = 1L;
+
 		private XYSeriesCollection dataset;
 		private JFreeChart mainChart;
 		private JFreeChart ySubChart;
@@ -129,6 +130,7 @@ public class Charts extends ApplicationFrame{
 
 		private static File file;
 		private static double defaultEValue;
+		private static ArrayList<Contig> contigMaster = new ArrayList<Contig>();
 		private static ArrayList <Contig> contigSet = new ArrayList<Contig>();
 		private static int taxaIndex = 2;
 		private static  int covLibraryIndex = 0; // which cov library to use //** needs to be added to UI
@@ -151,7 +153,7 @@ public class Charts extends ApplicationFrame{
 		private static  String[] taxaNames;
 		private static  String [] covLibraryNames;
 		private  final Color [] basicColors = {Color.RED, Color.BLUE, Color.YELLOW, Color.CYAN, Color.MAGENTA, Color.GREEN, Color.PINK, Color.ORANGE, new Color(199,21,133), new Color(72,209,204), new Color(46,139,87), 
-			new Color(0,128,128), new Color(128,0,128), new Color(47,79,79), new Color(0,0,128), new Color(138,43,226), new Color(199,21,133), new Color(0,255,0), new Color(220,20,60), new Color(216,191,216), new Color(255,215,0), new Color(0,100,0), new Color(186,85,211), new Color(255,140,0), new Color(153,0,76), new Color(204,255,255), new Color(153,255,204), new Color(255,204,153), new Color(204,153,255), new Color(51,0,102), new Color(0,76,153), new Color(255,0,127), new Color(0,102,102), new Color(102,0,51) };
+				new Color(0,128,128), new Color(128,0,128), new Color(47,79,79), new Color(0,0,128), new Color(138,43,226), new Color(199,21,133), new Color(0,255,0), new Color(220,20,60), new Color(216,191,216), new Color(255,215,0), new Color(0,100,0), new Color(186,85,211), new Color(255,140,0), new Color(153,0,76), new Color(204,255,255), new Color(153,255,204), new Color(255,204,153), new Color(204,153,255), new Color(51,0,102), new Color(0,76,153), new Color(255,0,127), new Color(0,102,102), new Color(102,0,51) };
 
 		private static  ArrayList<String> taxaForDisplay;
 
@@ -395,19 +397,7 @@ public class Charts extends ApplicationFrame{
 			return current --;
 		}
 
-		public void itemStateChanged(ItemEvent ie)
-		{
-			System.out.println("in itemStateChanged");
-			int series = -1;
-			Object source = ie.getItemSelectable();
-			for(int i = 0; i < taxaForDisplay.size(); i ++)
-			{
-				//if(source ==.equals(taxaForDisplay.get(i)))
-				{
 
-				}
-			}
-		}
 
 
 		private JPanel createFilterPanel()
@@ -992,6 +982,7 @@ public class Charts extends ApplicationFrame{
 		{
 			System.out.println("Update");
 			minContigLength = this.lengthJSlider.getValue();
+			System.out.println("**** min contig length: " + minContigLength);
 			history.add( "Minimum contig length changed to: " + minContigLength);
 
 			double exponent = this.eValueJSlider.getValue();
@@ -1002,7 +993,7 @@ public class Charts extends ApplicationFrame{
 			minCov = this.covJSlider.getValue();
 
 			history.add( "Minumum coverage changed to: " + minCov);
-			reReadFile();
+			reSort();
 			//updateDataset();
 			getTaxaForDisplay();
 			XYSeriesCollection newScatterData = createDataset();
@@ -1077,10 +1068,12 @@ public class Charts extends ApplicationFrame{
 
 		}
 
+		/**
+		 * Orders taxa based on taxa's span 
+		 */
 		private static void getTaxaForDisplay()
 		{
 			System.out.println("in getTaxaForDisplay");
-			//ArrayList<String> topTaxa = getTopTaxa();
 			ArrayList<String> temp = new ArrayList<String>();
 			temp.addAll(contigByTaxa.keySet());
 			taxaForDisplay = sortBySpan(temp);
@@ -1477,115 +1470,72 @@ public class Charts extends ApplicationFrame{
 			}
 		}
 		 */
-		public static boolean reReadFile()
+		public static void reSort()
 		{
+			String tax;
 			System.out.println("in re-readfile");
 			long start = System.nanoTime();
 			contigByTaxa.clear();
 			taxLevelSpan.clear();
 			contigSet.clear();
-			BufferedReader bufferedReader = null;
-			boolean correct = true;
-			try 
+			for(int i = 0; i < contigMaster.size(); i ++)
 			{
-				bufferedReader = new BufferedReader(new FileReader(file));
-				header = bufferedReader.readLine();
-
-				String text;
-				while ((text = bufferedReader.readLine()) != null) 
+				Contig addMe = contigMaster.get(i);
+				if(addMe.getLen() >= minContigLength && addMe.getCov()[covLibraryIndex] >= minCov && addMe.getEValue() < maxEValue)
 				{
-					String tax = "";
+					tax = addMe.getTax()[taxaIndex];
+					addMe.setVisibility(true);
+				}
+				else if (addMe.getLen() >= minContigLength && addMe.getCov()[covLibraryIndex] >= minCov && addMe.getEValue() >=  maxEValue)
+				{
+					tax = "Not annotated";
+					addMe.setVisibility(true);
+				}
+				else
+				{
+					tax = "";
+					addMe.setVisibility(false);
+				}
 
-					Contig addMe = parseContig(text, defaultEValue);
-					if (addMe == null)
+
+				if(addMe.isVisible())
+				{
+					
+					contigSet.add(addMe); //add Contig to Arraylist
+					if(tax.equals(""))
+						System.out.println("Error in sorting");
+					totalLength += addMe.getLen();
+					//find smallest evalue in data
+					if(minFoundEValue > addMe.getEValue())
 					{
-						System.out.println("Unable to parseContig");
+						minFoundEValue= addMe.getEValue();
+					}
+
+					if(maxCov < addMe.getCov()[covLibraryIndex])
+					{
+						maxCov = addMe.getCov()[covLibraryIndex];
+					}
+					if(contigByTaxa.containsKey(tax))//Key already exists in Map, default for phylum
+					{
+						ArrayList<Contig> temp = contigByTaxa.get(tax);
+						temp.add(addMe);
+						contigByTaxa.put(tax, temp);
+						taxLevelSpan.put(tax,taxLevelSpan.get(tax) + addMe.getLen());
 
 					}
 					else
-					{	
-
-						if(addMe.getLen() >= minContigLength && addMe.getCov()[covLibraryIndex] >= minCov && addMe.getEValue() < maxEValue)
-						{
-							tax = addMe.getTax()[taxaIndex];
-							System.out.println("in first else");
-						}
-						else if (addMe.getLen() >= minContigLength && addMe.getCov()[covLibraryIndex] >= minCov && addMe.getEValue() >=  maxEValue)
-						{
-							tax = "Not annotated";
-							System.out.println("In ifelse");
-						}
-						else
-						{
-							tax = "";
-
-							addMe.setVisibility(false);
-						}
-					}
-
-					if(addMe.isVisible())
 					{
-						System.out.println("********adding contigs");
-						contigSet.add(addMe); //add Contig to Arraylist
-						if(tax.equals(""))
-							System.out.println("Error in sorting");
-						totalLength += addMe.getLen();
-						//find smallest evalue in data
-						if(minFoundEValue > addMe.getEValue())
-						{
-							minFoundEValue= addMe.getEValue();
-						}
-
-						if(maxCov < addMe.getCov()[covLibraryIndex])
-						{
-							maxCov = addMe.getCov()[covLibraryIndex];
-						}
-						if(contigByTaxa.containsKey(tax))//Key already exists in Map, default for phylum
-						{
-							ArrayList<Contig> temp = contigByTaxa.get(tax);
-							temp.add(addMe);
-							contigByTaxa.put(tax, temp);
-							taxLevelSpan.put(tax,taxLevelSpan.get(tax) + addMe.getLen());
-
-						}
-						else
-						{
-							ArrayList<Contig> temp = new ArrayList<Contig>();
-							temp.add(addMe);
-							contigByTaxa.put(tax,  temp);
-							taxLevelSpan.put(tax, addMe.getLen());
-						}
+						ArrayList<Contig> temp = new ArrayList<Contig>();
+						temp.add(addMe);
+						contigByTaxa.put(tax,  temp);
+						taxLevelSpan.put(tax, addMe.getLen());
 					}
 				}
-				System.out.println("******Size of contigSet: " + contigSet.size());
-			} 
+			}
 
-			catch (FileNotFoundException ex) 
-			{
-				correct = false;
-				Logger.getLogger(Test.class.getName()).log(Level.SEVERE, null, ex);
-			} 
-			catch (IOException ex) 
-			{
-				correct = false;
-				Logger.getLogger(Test.class.getName()).log(Level.SEVERE, null, ex);
-			} 
-			finally 
-			{
-				try 
-				{
-					bufferedReader.close();
-				} 
-				catch (IOException ex)
-				{
-					correct = false;
-					Logger.getLogger(Test.class.getName()).log(Level.SEVERE, null, ex);
-				}
-			} 
 			long end = System.nanoTime();
 			long difference = end - start;
 			System.out.println("re-read time: " +(difference));
-			return correct;
 		}
 
 
@@ -1621,6 +1571,7 @@ public class Charts extends ApplicationFrame{
 					}
 					else
 					{	
+						contigMaster.add(addMe);
 						contigSet.add(addMe); //add Contig to Arraylist
 						String tax = addMe.getTax()[taxaIndex];
 						totalLength += addMe.getLen();
@@ -1660,12 +1611,12 @@ public class Charts extends ApplicationFrame{
 			catch (FileNotFoundException ex) 
 			{
 				correct = false;
-				Logger.getLogger(Test.class.getName()).log(Level.SEVERE, null, ex);
+				Logger.getLogger(Driver.class.getName()).log(Level.SEVERE, null, ex);
 			} 
 			catch (IOException ex) 
 			{
 				correct = false;
-				Logger.getLogger(Test.class.getName()).log(Level.SEVERE, null, ex);
+				Logger.getLogger(Driver.class.getName()).log(Level.SEVERE, null, ex);
 			} 
 			finally 
 			{
@@ -1676,7 +1627,7 @@ public class Charts extends ApplicationFrame{
 				catch (IOException ex)
 				{
 					correct = false;
-					Logger.getLogger(Test.class.getName()).log(Level.SEVERE, null, ex);
+					Logger.getLogger(Driver.class.getName()).log(Level.SEVERE, null, ex);
 				}
 			} 
 

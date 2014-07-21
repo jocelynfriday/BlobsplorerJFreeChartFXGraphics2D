@@ -1,6 +1,11 @@
 package org.jfree.chart.demo;
 
-
+/**
+ * Allows for the display of contig statistics as provided by {@link seeDom} for use in BlobSplorer and Charts.java
+ * 
+ * @author jocelynfriday
+ * @date 21 July 2014
+ */
 public class Contig 
 {
 	private String ID;
