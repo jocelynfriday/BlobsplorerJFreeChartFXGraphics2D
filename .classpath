@@ -11,5 +11,13 @@
 			<attribute name="javadoc_location" value="file:/Users/jocelynfriday/Documents/workspace/BlobsplorerJFreeChartFXGraphics2D/jfreesvg-1.9/javadoc/"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="/Users/jocelynfriday/Documents/workspace/BlobsplorerJFreeChartFXGraphics2D/batik-1.7/lib/batik-awt-util.jar"/>
+	<classpathentry kind="lib" path="/Users/jocelynfriday/Documents/workspace/BlobsplorerJFreeChartFXGraphics2D/batik-1.7/lib/batik-dom.jar"/>
+	<classpathentry kind="lib" path="/Users/jocelynfriday/Documents/workspace/BlobsplorerJFreeChartFXGraphics2D/batik-1.7/lib/batik-svggen.jar"/>
+	<classpathentry kind="lib" path="/Users/jocelynfriday/Documents/workspace/BlobsplorerJFreeChartFXGraphics2D/batik-1.7/lib/batik-util.jar"/>
+	<classpathentry kind="lib" path="/Users/jocelynfriday/Documents/workspace/BlobsplorerJFreeChartFXGraphics2D/batik-1.7/lib/xml-apis-ext.jar"/>
+	<classpathentry kind="lib" path="/Users/jocelynfriday/Documents/workspace/BlobsplorerJFreeChartFXGraphics2D/batik-1.7/lib/xml-apis.jar"/>
+	<classpathentry kind="lib" path="/Users/jocelynfriday/Documents/workspace/BlobsplorerJFreeChartFXGraphics2D/batik-1.7/lib/batik-ext.jar"/>
+	<classpathentry kind="lib" path="/Users/jocelynfriday/Documents/workspace/BlobsplorerJFreeChartFXGraphics2D/batik-1.7/lib/batik-xml.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

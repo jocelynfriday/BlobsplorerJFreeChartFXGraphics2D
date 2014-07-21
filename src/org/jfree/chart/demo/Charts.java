@@ -9,6 +9,7 @@ import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.Label;
 import java.awt.Paint;
+import java.awt.Rectangle;
 import java.awt.TextField;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -16,12 +17,15 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.geom.Rectangle2D;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
@@ -60,6 +64,9 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.table.DefaultTableModel;
 
+import org.apache.batik.dom.GenericDOMImplementation;
+import org.apache.batik.svggen.SVGGraphics2D;
+import org.apache.batik.svggen.SVGGraphics2DIOException;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.ChartTheme;
@@ -116,6 +123,8 @@ import org.jfree.data.xy.DefaultTableXYDataset;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
+import org.w3c.dom.DOMImplementation;
+import org.w3c.dom.Document;
 
 public class Charts extends ApplicationFrame{
 	static class BlobPanel extends DemoPanel implements ItemListener, ChangeListener, ChartChangeListener, KeyListener , SelectionChangeListener<XYCursor>
@@ -133,6 +142,7 @@ public class Charts extends ApplicationFrame{
 		private DefaultTableModel model;
 		private DefaultTableModel stats;
 		private ChartPanel chartPanel;
+		private JPanel checkBoxPanel;
 		private JTable table;
 		private LegendTitle legend;
 		private static ArrayList<String> history;
@@ -331,26 +341,28 @@ public class Charts extends ApplicationFrame{
 		private JPanel createTaxonomyPanel()
 		{
 			JPanel grandTaxPanel = new JPanel();
+
 			JPanel taxPanel = new JPanel();
+
 			taxPanel.setLayout(new BoxLayout(taxPanel, BoxLayout.Y_AXIS));
 			JPanel titlePanel = new JPanel();
 			Label title = new Label("Taxa as ordereed from largest to smallest spans");
 			titlePanel.add(title);
 			taxPanel.add(titlePanel);
 
-			JPanel checkBoxPanel = new JPanel();
+			checkBoxPanel = new JPanel();
 			int half = taxaForDisplay.size()/2+1;
 			GridLayout grid = new GridLayout(half, 1);
 
 			checkBoxPanel.setLayout(grid);
-		
+
 			for(int i = taxaForDisplay.size()-1; i >= 0; i --)
 			{
 				String name = taxaForDisplay.get(i);
 				JCheckBox box = new JCheckBox(name, true);
 				final int series = updateCount(i);
 				box.setActionCommand(name);
-			
+
 				box.addActionListener(new ActionListener()
 				{
 					XYItemRenderer renderer = ((XYPlot) mainChart.getPlot()).getRenderer();
@@ -360,12 +372,12 @@ public class Charts extends ApplicationFrame{
 						if(e.getActionCommand().equals(name))
 						{
 							System.out.println("In checked: " +  name);
-							
+
 							boolean visible = this.renderer.getItemVisible(series, 0);
 							this.renderer.setSeriesVisible(series, Boolean.valueOf(!visible));
 						}
 					}
-					
+
 				});
 				checkBoxPanel.add(box);
 			}
@@ -375,7 +387,11 @@ public class Charts extends ApplicationFrame{
 			JSplitPane split = new JSplitPane(1);
 			split.add(taxPanel);
 			JPanel legendPanel = new JPanel();
-			legend.setFrame(new BlockBorder());
+			split.add(legendPanel);
+			Dimension legendDim = legendPanel.getSize();
+			Rectangle rectangle = new Rectangle(legendDim);
+			//legend.draw((Graphics2D))
+			//legend.arrange(null);
 			//legendPanel.add(legend);
 
 			/*
@@ -592,12 +608,60 @@ public class Charts extends ApplicationFrame{
 				public void actionPerformed(ActionEvent e)
 				{
 					String svgName = svgField.getText();
+					Writer out = null;
+					try 
+					{
+						
+						Path file = Paths.get(svgName);
+						//file already exists in location
+						if(Files.exists(file))
+						{
+							errorMessage.setText("File already exists");
+							System.out.println("FILE ALREADy exists");
+							return;
+						}
+						else
+						{
+							//Code modified from JFreeChart 1.0.17 documentation
+							DOMImplementation domImpl = GenericDOMImplementation.getDOMImplementation();
+							Document document = domImpl.createDocument(null, "svg", null);
+							SVGGraphics2D svgGenerator = new SVGGraphics2D(document);
+							svgGenerator.getGeneratorContext().setPrecision(6);
+							mainChart.draw(svgGenerator, new Rectangle2D.Double(0,0,400,300), null);
+							boolean useCSS = true;
+							
+
+							out = new java.io.OutputStreamWriter(new FileOutputStream(new File(svgName)));
+							svgGenerator.stream(out, false);
+
+						}
+					} 
+					
+					catch (FileNotFoundException e1)
+					{
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					} catch (SVGGraphics2DIOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+					finally
+					{
+						try {
+							if(out != null)
+							out.close();
+						} catch (IOException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+					}
 
 
 
 				}
 			});
 			svgPanel.add(create);
+			exportPanel.add(svgPanel);
 			JPanel filePanel = new JPanel();
 			JLabel fileNameLabel = new JLabel ("Export file name:");
 			TextField fileField = new TextField(20);
@@ -630,7 +694,45 @@ public class Charts extends ApplicationFrame{
 							BufferedWriter writer = Files.newBufferedWriter(file, charset);
 							writer.write(header);
 							writer.newLine();
-							for(int i = 0; i < contigSet.size(); i ++)
+							for(int i = 0; i < taxaForDisplay.size(); i ++)
+							{
+								XYItemRenderer renderer = ((XYPlot) mainChart.getPlot()).getRenderer();
+
+								if(renderer.getItemVisible(i, 0))
+								{
+									ArrayList<Contig> current = contigByTaxa.get(taxaForDisplay.get(i));
+									for(int j = 0; j < current.size(); j++)
+									{
+										String contigLine = "";
+										if(current.get(j).isVisible())
+										{
+											contigLine = current.get(j).getID() + "\t";
+											contigLine += current.get(j).getLen() + "\t";
+											contigLine += current.get(j).getGC() + "\t";
+											double [] cov = current.get(j).getCov();
+											for(int l = 0; l < cov.length; l ++)
+											{
+												contigLine += covLibraryNames[l] + "=" + cov[l] + ";";
+											}
+
+											contigLine += "\t";
+											String [] tax = current.get(j).getTax();
+											for (int k = 0; k < tax.length; k++)
+											{
+												contigLine += taxaNames[k]  + "=" + tax[k] + ";";
+											}
+											contigLine += "\t";
+											contigLine += current.get(j).getEValue();
+											writer.write(contigLine, 0, contigLine.length());
+											writer.newLine();
+
+										}
+									}
+
+								}
+							}
+
+							/*for(int i = 0; i < contigSet.size(); i ++)
 							{
 								String contigLine = "";
 								if(contigSet.get(i).isVisible())
@@ -657,6 +759,7 @@ public class Charts extends ApplicationFrame{
 
 								}
 							}
+							 */
 
 						}
 					}
@@ -880,6 +983,7 @@ public class Charts extends ApplicationFrame{
 			DefaultTableXYDataset newYDataset = createYDataset();
 			((XYPlot) this.ySubChart.getPlot()).setDataset(newYDataset);
 
+			//Ensure color changes wiht data
 			XYItemRenderer r = ((XYPlot) this.mainChart.getPlot()).getRenderer();
 			StackedXYBarRenderer yRenderer =  (StackedXYBarRenderer) ((XYPlot) ySubChart.getPlot()).getRenderer();
 			StackedXYBarRenderer xRenderer =  (StackedXYBarRenderer) ((XYPlot) xSubChart.getPlot()).getRenderer();
@@ -892,19 +996,56 @@ public class Charts extends ApplicationFrame{
 				yRenderer.setSeriesPaint(i, paintMe);
 				xRenderer.setSeriesPaint(i, paintMe);
 			}
+			((XYPlot) xSubChart.getPlot()).setRenderer(xRenderer);
+			((XYPlot) ySubChart.getPlot()).setRenderer(yRenderer);
 
+			//ensure selection changes with change in data 
 			((XYPlot) this.mainChart.getPlot()).setRenderer(r);
 			this.dataset = (XYSeriesCollection) ((XYPlot) this.mainChart.getPlot()).getDataset();
 			DatasetSelectionExtension<XYCursor> datasetExtension = new XYDatasetSelectionExtension(newScatterData);
 
 			datasetExtension.addChangeListener(this);
-		    DatasetExtensionManager dExManager = new DatasetExtensionManager();
-		    dExManager.registerDatasetExtension(datasetExtension);
-		    chartPanel.setSelectionManager(new EntitySelectionManager(chartPanel, new Dataset[] { newScatterData }, dExManager));
+			DatasetExtensionManager dExManager = new DatasetExtensionManager();
+			dExManager.registerDatasetExtension(datasetExtension);
+			chartPanel.setSelectionManager(new EntitySelectionManager(chartPanel, new Dataset[] { newScatterData }, dExManager));
 
-			((XYPlot) xSubChart.getPlot()).setRenderer(xRenderer);
-			((XYPlot) ySubChart.getPlot()).setRenderer(yRenderer);
+
 			statistics(contigSet, this.stats);
+
+			//ensure taxonomy checkboxes change with data
+			checkBoxPanel.removeAll();
+
+			for(int i = taxaForDisplay.size()-1; i >= 0; i --)
+			{
+				String name = taxaForDisplay.get(i);
+				JCheckBox box = new JCheckBox(name, true);
+				final int series = updateCount(i);
+				box.setActionCommand(name);
+
+				box.addActionListener(new ActionListener()
+				{
+					XYItemRenderer renderer = ((XYPlot) mainChart.getPlot()).getRenderer();
+					StackedXYBarRenderer rendererX = (StackedXYBarRenderer) ((XYPlot) xSubChart.getPlot()).getRenderer();
+					StackedXYBarRenderer rendererY = (StackedXYBarRenderer) ((XYPlot) ySubChart.getPlot()).getRenderer();;
+					public void actionPerformed(ActionEvent e)
+					{
+						if(e.getActionCommand().equals(name))
+						{
+							System.out.println("In checked: " +  name);
+
+							boolean visible = this.renderer.getItemVisible(series, 0);
+							this.renderer.setSeriesVisible(series, Boolean.valueOf(!visible));
+							boolean visiblex = this.rendererX.getItemVisible(series, 0);
+							this.rendererX.setSeriesVisible(series, Boolean.valueOf(!visiblex));
+							boolean visibley = this.rendererY.getItemVisible(series, 0);
+							this.rendererY.setSeriesVisible(series, Boolean.valueOf(!visibley));
+
+						}
+					}
+
+				});
+				checkBoxPanel.add(box);
+			}
 
 		}
 
