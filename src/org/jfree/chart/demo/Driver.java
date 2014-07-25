@@ -46,7 +46,7 @@ import org.jfree.fx.FXGraphics2D;
 public class Driver extends Application 
 {
 	private static File file;
-	private static final Stage primaryStage = null;
+	
 
 	public static class ChartCanvas extends Canvas
 	{
@@ -104,6 +104,8 @@ public class Driver extends Application
 
 	public static void startWindow(Stage stage)
 	{
+		
+		
 		//Group root = new Group();
 		stage.setTitle("Welcome");
 		GridPane grid = new GridPane();
@@ -114,6 +116,10 @@ public class Driver extends Application
 		Scene scene = new Scene (grid, 500, 300);
 		stage.setScene(scene);
 
+		final Text errorMessage = new Text();
+		//errorMessage.setFill(Color.RED);
+		grid.add(errorMessage, 1, 7, 2, 1);
+		
 		Text sceneTitle = new Text("Welcome to Blobsplorer");
 		//sceneTitle.setFont(Font.font("Verdana", FontWeight.BOLD, 40.0));		
 		grid.add(sceneTitle,0, 0, 2,1);
@@ -135,6 +141,7 @@ public class Driver extends Application
 				if (file != null)
 				{
 					boolean attempt = readFile(file);
+					errorMessage.setText("");
 					if (attempt == false)
 						System.out.println("Something wrong with file");
 				}
@@ -167,9 +174,7 @@ public class Driver extends Application
 		grid.add(hbtn, 2, 5);
 
 
-		final Text errorMessage = new Text();
-		//errorMessage.setFill(Color.RED);
-		grid.add(errorMessage, 1, 7, 2, 1);
+		
 
 		submit.setOnAction(new EventHandler<ActionEvent>()
 				{

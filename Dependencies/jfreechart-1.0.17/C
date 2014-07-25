@@ -1,0 +1,26 @@
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+package org.jfree.chart.entity;
+import org.jfree.chart.plot.PlotRenderingInfo;
+import java.awt.Shape;
+import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
+/**
+ *
+ * @author peter
+ */
+public interface ZoomableEntity {
+
+    void zoom(double factor, Point2D anchor, Rectangle2D dataArea, boolean useAnchor);
+    
+    void zoom(double factor, PlotRenderingInfo info, Point2D zoomPoint, boolean useAnchor);
+    
+    void zoom(double vLower, double vUpper, double hLower, double hUpper, PlotRenderingInfo info, Point2D source);
+
+    Shape getArea();
+    
+    Rectangle2D[] getTransformedZoomRectangles(Rectangle2D zoomRectangle, PlotRenderingInfo plotInfo);
+}

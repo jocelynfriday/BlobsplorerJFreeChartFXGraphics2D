@@ -4,6 +4,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.GridLayout;
+import java.awt.Insets;
 import java.awt.Label;
 import java.awt.Rectangle;
 import java.awt.TextField;
@@ -13,6 +14,7 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.geom.Ellipse2D;
 import java.awt.geom.Rectangle2D;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -45,6 +47,7 @@ import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSlider;
@@ -66,6 +69,10 @@ import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.AxisLocation;
 import org.jfree.chart.axis.LogAxis;
 import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.block.BlockBorder;
+import org.jfree.chart.block.BlockContainer;
+import org.jfree.chart.block.BorderArrangement;
+import org.jfree.chart.block.EmptyBlock;
 import org.jfree.chart.event.ChartChangeEvent;
 import org.jfree.chart.event.ChartChangeListener;
 import org.jfree.chart.panel.selectionhandler.EntitySelectionManager;
@@ -78,6 +85,8 @@ import org.jfree.chart.renderer.xy.StackedXYBarRenderer;
 import org.jfree.chart.renderer.xy.StandardXYBarPainter;
 import org.jfree.chart.renderer.xy.XYItemRenderer;
 import org.jfree.chart.title.LegendTitle;
+import org.jfree.chart.ui.HorizontalAlignment;
+import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.data.Range;
 import org.jfree.data.extension.DatasetIterator;
 import org.jfree.data.extension.DatasetSelectionExtension;
@@ -123,10 +132,9 @@ public class Charts extends ApplicationFrame{
 		private ChartPanel chartPanel;
 		private JPanel checkBoxPanel;
 		private JTable table;
-		private LegendTitle legend;
 		private static ArrayList<String> history;
 		private HashMap<String, Color>  colors;
-
+		private int previousTaxa = 0;
 
 		private static File file;
 		private static double defaultEValue;
@@ -164,12 +172,14 @@ public class Charts extends ApplicationFrame{
 			defaultMinCov= covLevel;
 			this.file = file;
 			this.defaultEValue = eValue;
+			previousTaxa = taxaIndex;
 			readFile(); // might add boolean check later
 			getTaxaForDisplay();
 			colors = createColorArray();
 
 			chartPanel = (ChartPanel) createMainPanel();
 			chartPanel.setPreferredSize(new java.awt.Dimension(700, 500));
+
 
 
 			add(chartPanel);
@@ -200,7 +210,7 @@ public class Charts extends ApplicationFrame{
 			ySubChartPanel.setMinimumDrawWidth(0);
 			ySubChartPanel.setMinimumDrawHeight(0);
 
-			ySubChartPanel.setPreferredSize(new Dimension (300, 200));
+			ySubChartPanel.setPreferredSize(new Dimension (300, 500));
 
 			minEvaluePanel.add(ySubChartPanel);
 			//minEvaluePanel.setPreferredSize(new Dimension(200,250));
@@ -340,11 +350,15 @@ public class Charts extends ApplicationFrame{
 				String name = taxaForDisplay.get(i);
 				JCheckBox box = new JCheckBox(name, true);
 				final int series = updateCount(i);
+				FillComponent component = new FillComponent(colors.get(taxaForDisplay.get(i)));
+				checkBoxPanel.add(component);
 				box.setActionCommand(name);
 
 				box.addActionListener(new ActionListener()
 				{
 					XYItemRenderer renderer = ((XYPlot) mainChart.getPlot()).getRenderer();
+					StackedXYBarRenderer x = (StackedXYBarRenderer) ((XYPlot)xSubChart.getPlot()).getRenderer();
+					StackedXYBarRenderer y = (StackedXYBarRenderer) ((XYPlot)ySubChart.getPlot()).getRenderer();
 
 					public void actionPerformed(ActionEvent e)
 					{
@@ -354,6 +368,14 @@ public class Charts extends ApplicationFrame{
 
 							boolean visible = this.renderer.getItemVisible(series, 0);
 							this.renderer.setSeriesVisible(series, Boolean.valueOf(!visible));
+
+							boolean visiblex = this.x.getItemVisible(series,0);
+							this.x.setSeriesVisible(series, Boolean.valueOf(!visiblex));
+
+							boolean visibley = this.y.getItemVisible(series,0);
+							this.y.setSeriesVisible(series, Boolean.valueOf(!visibley));
+
+
 						}
 					}
 
@@ -478,6 +500,7 @@ public class Charts extends ApplicationFrame{
 					System.out.println("action performed ");
 					if(taxComboBox.getSelectedIndex() != taxaIndex)
 					{
+
 						taxaIndex = taxComboBox.getSelectedIndex();
 						history.add( "Taxa index changed to: " + taxaNames[taxaIndex] + "at index: " + taxaIndex);
 						//updateClassifications();
@@ -543,6 +566,7 @@ public class Charts extends ApplicationFrame{
 			maxEValue = 1;
 			minContigLength = 0;
 			minCov = defaultMinCov;
+			taxaIndex = 3;
 			readFile();
 			getTaxaForDisplay();
 			XYSeriesCollection newScatterData = createDataset();
@@ -565,7 +589,7 @@ public class Charts extends ApplicationFrame{
 			exportPanel.setLayout(new BoxLayout(exportPanel, BoxLayout.Y_AXIS));
 
 			JPanel svgPanel = new JPanel();
-			JLabel svgLabel = new JLabel("SVG file naem:");
+			JLabel svgLabel = new JLabel("Group SVG file path/name:");
 			svgPanel.add(svgLabel);
 			TextField svgField = new TextField(20);
 			svgPanel.add(svgField);
@@ -575,6 +599,9 @@ public class Charts extends ApplicationFrame{
 				public void actionPerformed(ActionEvent e)
 				{
 					String svgName = svgField.getText();
+					if(svgName == null)
+						JOptionPane.showMessageDialog(null,"Please enter a new file name");
+
 					Writer outMain = null;
 					Writer outX = null;
 					Writer outY = null;
@@ -587,8 +614,7 @@ public class Charts extends ApplicationFrame{
 						//file already exists in location
 						if(Files.exists(fileSet) || Files.exists(fileX) || Files.exists(fileY))
 						{
-							errorMessage.setText("File already exists");
-							System.out.println("FILE ALREADy exists");
+							JOptionPane.showMessageDialog(null,"File already exists");
 							return;
 						}
 						else
@@ -602,7 +628,7 @@ public class Charts extends ApplicationFrame{
 							mainChart.draw(svgGenerator, new Rectangle2D.Double(0,0,700,500), null);
 							boolean useCSS = true;
 							outMain = new java.io.OutputStreamWriter(new FileOutputStream(new File(svgName+".svg")));
-							svgGenerator.stream(outMain, false );
+							svgGenerator.stream(outMain, false);
 
 
 							xSubChart.draw(svgGenerator, new Rectangle2D.Double(0,0,700,300), null);
@@ -662,12 +688,15 @@ public class Charts extends ApplicationFrame{
 					{
 						String export = fileField.getText();
 
+						if(export == null)
+							JOptionPane.showMessageDialog(null,"Please enter a new file name");
+
+
 						Path file = Paths.get(export);
 						//file already exists in location
 						if(Files.exists(file))
 						{
-							errorMessage.setText("File already exists");
-							System.out.println("FILE ALREADy exists");
+							JOptionPane.showMessageDialog(null,"File already exists");
 							return;
 						}
 						//file does not exist
@@ -687,6 +716,7 @@ public class Charts extends ApplicationFrame{
 									for(int j = 0; j < current.size(); j++)
 									{
 										String contigLine = "";
+									
 										if(current.get(j).isVisible())
 										{
 											contigLine = current.get(j).getID() + "\t";
@@ -707,7 +737,10 @@ public class Charts extends ApplicationFrame{
 											contigLine += "\t";
 											contigLine += current.get(j).getEValue();
 											writer.write(contigLine, 0, contigLine.length());
-											writer.newLine();
+											if(j != current.size()-1 && i != taxaForDisplay.size()-1)
+											{
+												contigLine += "\n";
+											}
 
 										}
 									}
@@ -792,28 +825,29 @@ public class Charts extends ApplicationFrame{
 				public void actionPerformed(ActionEvent e)
 				{
 					System.out.println("action performed in submit");
-					Writer fileWriter = null;
-					BufferedWriter bufferedWriter = null;
+					BufferedWriter writer = null;
 					try
 					{
 						String historyExport = historyField.getText();
+
+						if(historyExport == null)
+							JOptionPane.showMessageDialog(null,"Please enter a new file name");
 
 						Path file = Paths.get(historyExport);
 						//file already exists in location
 						if(Files.exists(file))
 						{
-							errorMessage.setText("File already exists");
-							System.out.println("FILE ALREADy exists");
+							JOptionPane.showMessageDialog(null,"File already exists");
 							return;
 						}
 						//file does not exist
 						else
 						{
 							java.nio.charset.Charset charset = java.nio.charset.StandardCharsets.US_ASCII;
-							BufferedWriter writer = Files.newBufferedWriter(file, charset);
-							for(String line: history)
+							writer = Files.newBufferedWriter(file, charset);
+							for(int i = 0; i < history.size(); i ++)
 							{
-								writer.write(line, 0, line.length());
+								writer.write(history.get(i), 0, history.get(i).length());
 								writer.newLine();
 							}
 
@@ -837,12 +871,12 @@ public class Charts extends ApplicationFrame{
 					}
 					finally
 					{
-						if(bufferedWriter != null && fileWriter != null)
+						if(writer != null )
 						{
 							try
 							{
-								bufferedWriter.close();
-								fileWriter.close();
+								writer.close();
+
 							}
 							catch (IOException ioe)
 							{
@@ -872,6 +906,7 @@ public class Charts extends ApplicationFrame{
 			this.mainChart = createChart(xydataset, datasetExtension);
 			this.mainChart.addChangeListener(this);
 			XYPlot plot = (XYPlot) this.mainChart.getPlot();
+
 
 			this.dataset = (XYSeriesCollection) plot.getDataset();
 			ChartPanel panel = new ChartPanel(this.mainChart);
@@ -933,7 +968,6 @@ public class Charts extends ApplicationFrame{
 			plot.setDomainPannable(true);
 			plot.setRangePannable(true);
 			NumberAxis xAxis = new NumberAxis("GC");
-			xAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
 			xAxis.setLowerMargin(0.0);
 			xAxis.setUpperMargin(0.0);
 			xAxis.setRange(0.0, 1.0);
@@ -943,9 +977,6 @@ public class Charts extends ApplicationFrame{
 			yAxis.setLowerMargin(0.0);
 			yAxis.setUpperMargin(0.0);
 			plot.setRangeAxis(yAxis);
-
-
-			legend = new LegendTitle(plot);
 
 			event.addChangeListener(plot);
 			return chart;
@@ -993,9 +1024,15 @@ public class Charts extends ApplicationFrame{
 			minCov = this.covJSlider.getValue();
 
 			history.add( "Minumum coverage changed to: " + minCov);
+
 			reSort();
 			//updateDataset();
 			getTaxaForDisplay();
+			if(previousTaxa != taxaIndex)
+			{
+				colors = createColorArray();
+			}
+			previousTaxa = taxaIndex;
 			XYSeriesCollection newScatterData = createDataset();
 			((XYPlot) this.mainChart.getPlot()).setDataset(newScatterData);
 			DefaultTableXYDataset newXDataset = createXDataset();
@@ -1039,6 +1076,8 @@ public class Charts extends ApplicationFrame{
 				String name = taxaForDisplay.get(i);
 				JCheckBox box = new JCheckBox(name, true);
 				final int series = updateCount(i);
+				FillComponent component = new FillComponent(colors.get(taxaForDisplay.get(i)));
+				checkBoxPanel.add(component);
 				box.setActionCommand(name);
 				//set action listener to respond to changes is JCheckBox selection.  
 				box.addActionListener(new ActionListener()
@@ -1500,7 +1539,7 @@ public class Charts extends ApplicationFrame{
 
 				if(addMe.isVisible())
 				{
-					
+
 					contigSet.add(addMe); //add Contig to Arraylist
 					if(tax.equals(""))
 						System.out.println("Error in sorting");
@@ -1650,7 +1689,7 @@ public class Charts extends ApplicationFrame{
 			StringTokenizer st;
 			StringTokenizer covST;
 			StringTokenizer taxST;
-			Contig contigToAdd;
+			Contig contigToAdd = null;
 			String key;
 			String tempString;
 			double value;
@@ -1665,56 +1704,62 @@ public class Charts extends ApplicationFrame{
 			covST = new StringTokenizer(covString, ";");
 			double [] cov = new double [covST.countTokens()];
 			covLibraryNames = new String [covST.countTokens()];
-			while(covST.hasMoreTokens())
-			{
-				tempString = covST.nextToken();
-				parse = new StringTokenizer(tempString, "=");
-				if(parse.countTokens() % 2 == 0  && parse.countTokens() != 0)
+			try{
+				while(covST.hasMoreTokens())
 				{
-					key = parse.nextToken();
-					covLibraryNames[count] = key;
-					value = Double.parseDouble(parse.nextToken().replace(";",""));
-					cov[count] = value;
-					count ++;
+					tempString = covST.nextToken();
+					parse = new StringTokenizer(tempString, "=");
+					if(parse.countTokens() % 2 == 0  && parse.countTokens() != 0)
+					{
+						key = parse.nextToken();
+						covLibraryNames[count] = key;
+						value = Double.parseDouble(parse.nextToken().replace(";",""));
+						cov[count] = value;
+						count ++;
+					}
+					else
+					{
+						System.out.println("Incorrect number of key value pair entries");
+						return null;
+					}
 				}
+				taxString = st.nextToken();
+				taxST = new StringTokenizer(taxString, ";");
+				String [] tax = new String [taxST.countTokens()];
+				taxaNames = new String [taxST.countTokens()];
+				String keyValue;
+				while(taxST.hasMoreTokens())
+				{
+					tempString = taxST.nextToken();
+					parse = new StringTokenizer(tempString, "=");
+					if(parse.countTokens() % 2 == 0)
+					{
+						key = parse.nextToken();
+						taxaNames[taxCount] = key;
+						keyValue = parse.nextToken().replace(";","");
+						tax[taxCount] = keyValue;
+						taxCount ++;
+					}
+					else
+					{
+						System.out.println("Incorrect number of key value pair entries");
+						return null;
+					}
+				}
+				temp = st.nextToken();
+				if (temp.contains("N/A"))
+					eValue = userDefinedEValue;
 				else
 				{
-					System.out.println("Incorrect number of key value pair entries");
-					return null;
+					eValue = Double.parseDouble(temp);
 				}
-			}
-			taxString = st.nextToken();
-			taxST = new StringTokenizer(taxString, ";");
-			String [] tax = new String [taxST.countTokens()];
-			taxaNames = new String [taxST.countTokens()];
-			String keyValue;
-			while(taxST.hasMoreTokens())
-			{
-				tempString = taxST.nextToken();
-				parse = new StringTokenizer(tempString, "=");
-				if(parse.countTokens() % 2 == 0)
-				{
-					key = parse.nextToken();
-					taxaNames[taxCount] = key;
-					keyValue = parse.nextToken().replace(";","");
-					tax[taxCount] = keyValue;
-					taxCount ++;
-				}
-				else
-				{
-					System.out.println("Incorrect number of key value pair entries");
-					return null;
-				}
-			}
-			temp = st.nextToken();
-			if (temp.contains("N/A"))
-				eValue = userDefinedEValue;
-			else
-			{
-				eValue = Double.parseDouble(temp);
-			}
 
-			contigToAdd = new Contig(id, len, gc, cov, tax, eValue);
+				contigToAdd = new Contig(id, len, gc, cov, tax, eValue);
+			}
+			catch(NumberFormatException ne)
+			{
+				ne.printStackTrace();
+			}
 
 			return contigToAdd;
 		}
