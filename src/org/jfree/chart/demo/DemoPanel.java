@@ -20,7 +20,11 @@ import org.jfree.chart.JFreeChart;
  */
 public class DemoPanel extends JPanel {
 
-    List charts;
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	List charts;
 
     /**
      * Creates a new demo panel with the specified layout manager.

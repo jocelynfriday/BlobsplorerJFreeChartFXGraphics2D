@@ -204,16 +204,16 @@ public class Driver extends Application
 					try
 					{
 						covNum = Integer.parseInt(cov);
-						if (covNum == 0)
+						if (covNum < 0 )
 						{
-							errorMessage.setText("Enter a number other than 0");
+							errorMessage.setText("Enter a number greater than 0");
 							run = false;
 						}
 
 					}
 					catch(NumberFormatException nft)
 					{
-						errorMessage.setText("Enter a valid number (e.g. 1e-5, -8, etc)");
+						errorMessage.setText("Enter a valid number");
 						run = false;
 					}
 				}

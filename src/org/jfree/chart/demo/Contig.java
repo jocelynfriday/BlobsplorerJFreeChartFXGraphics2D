@@ -6,7 +6,7 @@ package org.jfree.chart.demo;
  * @author jocelynfriday
  * @date 21 July 2014
  */
-public class Contig 
+public class Contig //implements Comparable<Contig>
 {
 	private String ID;
 	private int len;
@@ -26,7 +26,7 @@ public class Contig
 	 * @param tax array of taxonomic level values
 	 * @param eVal E-Value associated with taxonomic classification
 	 */
-	public Contig (String ID, int len, double gc, double[] cov, String [] tax, double eVal)
+	public Contig (String ID, int len, double gc, double[] cov, String [] tax, double eVal) 
 	{
 		this.ID = ID;
 		this.len = len;
@@ -140,5 +140,11 @@ public class Contig
 			return false;
 		}
 	}
+	/*
+	public int compareTo(Contig c)
+	{
+		return ((Integer)getLen()).compareTo(((Integer)c.getLen()));
+	}
+	*/
 
 }

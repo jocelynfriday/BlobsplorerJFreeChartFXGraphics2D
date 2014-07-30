@@ -10,6 +10,11 @@ import javax.swing.JComponent;
 
 public class FillComponent extends JComponent
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	
 	Color paint;
 	public FillComponent(Color c)
 	{
