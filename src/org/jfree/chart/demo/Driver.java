@@ -204,7 +204,7 @@ public class Driver extends Application
 					try
 					{
 						covNum = Integer.parseInt(cov);
-						if (covNum < 0 )
+						if (covNum <= 0 )
 						{
 							errorMessage.setText("Enter a number greater than 0");
 							run = false;
@@ -213,14 +213,14 @@ public class Driver extends Application
 					}
 					catch(NumberFormatException nft)
 					{
-						errorMessage.setText("Enter a valid number");
+						errorMessage.setText("Enter an integer (e.g. 1, 2)");
 						run = false;
 					}
 				}
 				//Make sure default eVal added
 				if(eVal == null)
 				{
-					errorMessage.setText("Enter an double value (e.g. 1.0, 2.0, etc)");
+					errorMessage.setText("Enter a value between 0 and 1 inclusive (e.g. 0, 1, 1E-1 etc)");
 					run = false;
 				}
 				else
@@ -228,9 +228,9 @@ public class Driver extends Application
 					try
 					{
 						eValue = Double.parseDouble(cov);
-						if (eValue == 0)
+						if (eValue < 0 || eValue > 1)
 						{
-							errorMessage.setText("Enter a number other than 0");
+							errorMessage.setText("Enter a number between 0 and 1");
 							run = false;
 						}
 

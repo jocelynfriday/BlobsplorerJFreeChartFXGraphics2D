@@ -29,10 +29,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -167,6 +165,7 @@ public class Charts extends ApplicationFrame{
 		public BlobPanel(File file, int covLevel, double eValue)
 		{
 			super(new BorderLayout());
+			long start = System.nanoTime();
 			System.out.println("in blobPanel");
 			defaultMinCov= covLevel;
 			this.file = file;
@@ -219,7 +218,6 @@ public class Charts extends ApplicationFrame{
 
 			minEvaluePanel.add(ySubChartPanel);
 			//minEvaluePanel.setPreferredSize(new Dimension(200,250));
-			System.out.println("***FINISHED Y Panel");
 
 			//Add X dataset <- GC
 			JPanel minLengthPanel = new JPanel(new BorderLayout());
@@ -278,10 +276,10 @@ public class Charts extends ApplicationFrame{
 			add(minEvaluePanel, BorderLayout.EAST);
 			add(minLengthPanel, BorderLayout.NORTH);
 			this.mainChart.setNotify(true);
-			System.out.println("***FINISHED Blob");
 			createTabbedControl();
 
-
+			long end = System.nanoTime();
+			System.out.println("Total time: " + (end - start));
 		}
 
 
@@ -294,6 +292,7 @@ public class Charts extends ApplicationFrame{
 		 */
 		public void createTabbedControl()
 		{
+			long start = System.nanoTime();
 			controlFrame = new JFrame("Control Panel");
 			controlFrame.setSize(800, 200);
 			JTabbedPane control = new JTabbedPane();
@@ -304,6 +303,8 @@ public class Charts extends ApplicationFrame{
 			controlFrame.add(control);
 			controlFrame.pack();
 			controlFrame.setVisible(true);
+			long end = System.nanoTime();
+			System.out.println("create tabbed control: " + (end - start));
 		}
 
 
@@ -319,6 +320,7 @@ public class Charts extends ApplicationFrame{
 		 */
 		private JPanel createStatsPanel()
 		{
+			long start = System.nanoTime();
 			JPanel statsPanel = new JPanel(new BorderLayout());
 
 			this.stats = new DefaultTableModel(new String [] {"Statistic", "Value", "Percentage"}, 0);
@@ -346,6 +348,8 @@ public class Charts extends ApplicationFrame{
 
 			split.add(p);
 			statsPanel.add(split);
+			long end = System.nanoTime();
+			System.out.println("Stats panel" + (end - start));
 			return statsPanel;
 		}
 
@@ -357,8 +361,7 @@ public class Charts extends ApplicationFrame{
 		 */
 		private JPanel createTaxonomyPanel()
 		{
-			JPanel grandTaxPanel = new JPanel();
-
+			long start = System.nanoTime();
 			JPanel taxPanel = new JPanel();
 
 			taxPanel.setLayout(new BoxLayout(taxPanel, BoxLayout.Y_AXIS));
@@ -437,7 +440,8 @@ public class Charts extends ApplicationFrame{
 
 
 			taxPanel.add(statsScroller, BorderLayout.CENTER);
-
+			long end = System.nanoTime();
+			System.out.println("tabbed panel" + (end - start));
 			return taxPanel;
 		}
 
@@ -466,8 +470,7 @@ public class Charts extends ApplicationFrame{
 		 */
 		private static double[] GenerateLogSpace(double minY2, double maxY2, int logBins)
 		{
-			System.out.println(minY2);
-			System.out.println(maxY2);
+			long start = System.nanoTime();
 			double logMin = Math.log10(minY2);
 			double logMax = Math.log10(maxY2);
 			double delta = (logMax - logMin) / logBins;
@@ -477,9 +480,10 @@ public class Charts extends ApplicationFrame{
 			for (int i = 0; i <= logBins; ++i)
 			{
 				v[i] = (double) Math.pow(10, logMin + accDelta);
-				System.out.println(v[i]);
 				accDelta += delta;// accDelta = delta * i
 			}
+			long end = System.nanoTime();
+			System.out.println("generate log space " + (end - start));
 			return v;
 		}
 
@@ -494,6 +498,7 @@ public class Charts extends ApplicationFrame{
 		private JPanel createFilterPanel()
 		{
 			//Min length cutoff 
+			long start = System.nanoTime();
 			JPanel filterPanel = new JPanel();
 			filterPanel.setLayout(new BoxLayout(filterPanel, BoxLayout.Y_AXIS));
 			JPanel length = new JPanel();
@@ -568,10 +573,8 @@ public class Charts extends ApplicationFrame{
 			{
 				public void actionPerformed(ActionEvent e)
 				{
-					System.out.println("action performed ");
 					if(taxComboBox.getSelectedIndex() != taxaIndex)
 					{
-
 						taxaIndex = taxComboBox.getSelectedIndex();
 						history.add( "Taxa index changed to: " + taxaNames[taxaIndex] + "at index: " + taxaIndex);
 						//updateClassifications();
@@ -644,6 +647,9 @@ public class Charts extends ApplicationFrame{
 			checkBoxSubChartPanel.add(yPercentage);
 			filterPanel.add(checkBoxSubChartPanel);
 			filterPanel.add(buttonPanel);
+			
+			long end = System.nanoTime();
+			System.out.println("Filter panel " + (end - start));
 			return filterPanel;
 		}
 
@@ -652,6 +658,7 @@ public class Charts extends ApplicationFrame{
 		 */
 		private void resetVisible()
 		{
+			long start = System.nanoTime();
 			XYItemRenderer renderer = ((XYPlot) this.mainChart.getPlot()).getRenderer();
 			StackedXYBarRenderer xRenderer =  (StackedXYBarRenderer) ((XYPlot) xSubChart.getPlot()).getRenderer();
 			StackedXYBarRenderer yRenderer =  (StackedXYBarRenderer) ((XYPlot) ySubChart.getPlot()).getRenderer();
@@ -663,6 +670,8 @@ public class Charts extends ApplicationFrame{
 				xRenderer.setSeriesVisible(i, Boolean.valueOf(true));
 				yRenderer.setSeriesVisible(i, Boolean.valueOf(true));
 			}
+			long end = System.nanoTime();
+			System.out.println("reset visible " + (end - start));
 		}
 
 		/**
@@ -670,6 +679,7 @@ public class Charts extends ApplicationFrame{
 		 */
 		private void reLoad()
 		{
+			long start = System.nanoTime();
 			maxEValue = 1;
 			minContigLength = 0;
 			minCov = defaultMinCov;
@@ -691,15 +701,18 @@ public class Charts extends ApplicationFrame{
 			((XYPlot) this.xSubChart.getPlot()).setDataset(newXDataset);
 			DefaultTableXYDataset newYDataset = createYDataset();
 			((XYPlot) this.ySubChart.getPlot()).setDataset(newYDataset);
+			long end = System.nanoTime();
+			System.out.println("reload minus reset and stats " + (end - start)); 
 			resetVisible();
 			statistics(contigSet, this.stats);
+			
 		}
 
 
 
 		private JPanel createExportPanel() 
 		{
-
+			long start = System.nanoTime();
 			JPanel exportPanel = new JPanel();
 			final Text errorMessage = new Text();
 			exportPanel.setLayout(new BoxLayout(exportPanel, BoxLayout.Y_AXIS));
@@ -842,7 +855,6 @@ public class Charts extends ApplicationFrame{
 
 								if(renderer.getItemVisible(i, 0))
 								{
-									System.out.println("included: "+ taxaForDisplay.get(i));
 									ArrayList<Contig> current = contigByTaxa.get(taxaForDisplay.get(i));
 									for(int j = 0; j < current.size(); j++)
 									{
@@ -1142,6 +1154,8 @@ public class Charts extends ApplicationFrame{
 			historyPanel.add(historyButton);
 			exportPanel.add(historyPanel);
 
+			long end = System.nanoTime();
+			System.out.println("export panel " + (end - start));
 			return exportPanel;
 		}
 
@@ -1150,6 +1164,7 @@ public class Charts extends ApplicationFrame{
 		{
 			System.out.println("in createMainPanel");
 			XYDataset xydataset = createDataset();
+			long start = System.nanoTime();
 			DatasetSelectionExtension<XYCursor> datasetExtension = new XYDatasetSelectionExtension(xydataset);
 
 			datasetExtension.addChangeListener(this);
@@ -1171,12 +1186,16 @@ public class Charts extends ApplicationFrame{
 			DatasetExtensionManager dExManager = new DatasetExtensionManager();
 			dExManager.registerDatasetExtension(datasetExtension);
 			panel.setSelectionManager(new EntitySelectionManager(panel, new Dataset[] {xydataset}, dExManager));
+			
+			long end = System.nanoTime();
+			System.out.println("create main panel minus create dataset " + (end - start));
 			return panel;
 		}
 
 		public void chartChanged(ChartChangeEvent event)
 		{
 			System.out.println("in chartChanged");
+			long start = System.nanoTime();
 			XYPlot plot = (XYPlot) this.mainChart.getPlot();
 			if(!plot.getDomainAxis().getRange().equals(this.lastXRange))
 			{
@@ -1190,6 +1209,8 @@ public class Charts extends ApplicationFrame{
 				XYPlot plotY = (XYPlot) this.ySubChart.getPlot();
 				plotY.getDomainAxis().setRange(this.lastYRange);
 			}
+			long end = System.nanoTime();
+			System.out.println("chart changed " + (end - start));
 		}
 
 		/**
@@ -1204,6 +1225,7 @@ public class Charts extends ApplicationFrame{
 		private JFreeChart createChart(XYDataset dataset, DatasetSelectionExtension<XYCursor> event)
 		{
 			System.out.println("In createChart");
+			long start = System.nanoTime();
 			this.dataset = (XYSeriesCollection) dataset;
 			JFreeChart chart = ChartFactory.createScatterPlot("", "GC", "COV", this.dataset);
 
@@ -1223,6 +1245,8 @@ public class Charts extends ApplicationFrame{
 			plot.setRangeAxis(yAxis);
 
 			event.addChangeListener(plot);
+			long end = System.nanoTime();
+			System.out.println("create chart " + (end - start));
 			return chart;
 		}
 
@@ -1256,6 +1280,7 @@ public class Charts extends ApplicationFrame{
 		public void update ()
 		{
 			System.out.println("Update");
+			long start = System.nanoTime();
 			minContigLength = this.lengthJSlider.getValue();
 			System.out.println("**** min contig length: " + minContigLength);
 			history.add( "Minimum contig length changed to: " + minContigLength);
@@ -1363,8 +1388,6 @@ public class Charts extends ApplicationFrame{
 					{
 						if(e.getActionCommand().equals(name))
 						{
-							System.out.println("In checked: " +  name);
-
 							boolean visible = this.renderer.getItemVisible(series, 0);
 							this.renderer.setSeriesVisible(series, Boolean.valueOf(!visible));
 							this.rendererX.setSeriesVisible(series, Boolean.valueOf(!visible));
@@ -1378,7 +1401,8 @@ public class Charts extends ApplicationFrame{
 				checkBoxPanel.add(box);
 			}
 			previousTaxa = taxaIndex;
-
+			long end = System.nanoTime();
+			System.out.println("update " + (end - start));
 		}
 
 		/**
@@ -1387,61 +1411,21 @@ public class Charts extends ApplicationFrame{
 		private static void getTaxaForDisplay()
 		{
 			System.out.println("in getTaxaForDisplay");
+			long start = System.nanoTime();
 			ArrayList<String> temp = new ArrayList<String>();
 			temp.addAll(contigByTaxa.keySet());
 			taxaForDisplay = sortBySpan(temp);
-
-			System.out.println("Check order");
-			for(int i = 0; i < taxaForDisplay.size(); i ++)
-			{
-				System.out.println(taxaForDisplay.get(i) + "\t" + taxLevelSpan.get(taxaForDisplay.get(i)));
-			}
+			long end = System.nanoTime();
+			System.out.println("get top taxa " + (end - start));
 		}
 
-		/*
-		private JFreeChart createChart(XYDataset dataset, DatasetSelectionExtension<XYCursor> datasetExtension) 
-		{
-			JFreeChart chart = ChartFactory.createScatterPlot("BlobSplorer", "GC", "COV", dataset);
-
-			XYPlot plot = (XYPlot)chart.getPlot();
-			plot.setNoDataMessage("NO DATA");
-
-			plot.setDomainPannable(true);
-			plot.setRangePannable(true);
-
-
-			plot.setDomainGridlineStroke(new BasicStroke (0.0f));
-			plot.setRangeGridlineStroke(new BasicStroke(0.0f));
-
-			XYDotRenderer r = new XYDotRenderer();
-			r.setDotWidth(4);
-			r.setDotHeight(4);
-			plot.setRenderer(r);
-			//XYItemRenderer r = (XYItemRenderer) plot.getRenderer();
-			//r.setSeriesFillPaint(0, Color.GRAY);
-
-			NumberAxis domainAxis = (NumberAxis)plot.getDomainAxis();
-			domainAxis.setRange(0.00, 1.00);
-			domainAxis.setTickUnit(new NumberTickUnit(0.1));
-
-			LogAxis yAxis = new LogAxis("COV");
-			plot.setRangeAxis(yAxis);
-
-			//IRSUtilities.setSelectedItemOutlinePaint(r, datasetExtension, Color.white);
-
-			datasetExtension.addChangeListener(plot);
-
-
-			return chart;
-
-		}
-		 */
+		
 		private static DefaultTableXYDataset createYDataset()
 		{
 			System.out.println("in createYDataset");
+			long start = System.nanoTime();
 			DefaultTableXYDataset dataset = new DefaultTableXYDataset();
 			double total = maxY+10;
-			System.out.println("total" + total);
 			double [] bins;
 			//if (minY < defaultEValue)
 			bins = GenerateLogSpace(1E-5, maxY, 500);
@@ -1470,31 +1454,15 @@ public class Charts extends ApplicationFrame{
 				}
 				dataset.addSeries(s);
 			}
-			/*
-			double binSortFactor = total/500;
-			System.out.println("bin factor: " + binSortFactor);
-
-			double range = maxY - minY;
-			double scale = range/1000.0;
-			System.out.println("****MIN Y " + minY);
-			for(int i = 0; i < taxaForDisplay.size(); i ++)
-			{
-				XYSeries s = new XYSeries(taxaForDisplay.get(i), true, false);
-				double [] bins = segregateYByBucket(contigByTaxa.get(taxaForDisplay.get(i))); //segregateByBucket(contigByTaxa.get(taxaForDisplay.get(i)), 500, binSortFactor,  1);
-				for(int j = 0; j < bins.length; j ++)
-				{
-					s.add(minY + j*scale, bins[j]);
-					//s.add(j*binSortFactor, bins[j]);
-				}
-				dataset.addSeries(s);
-			}
-			 */
+			long end = System.nanoTime();
+			System.out.println("createY " + (end - start));
 			return dataset;
 
 		}
 
 		private static double [] segregateYByBucket(ArrayList<Contig> series)
 		{
+			
 			double [] bins = new double [1000];
 			double range = maxY - minY;
 			double scale = range/1000.0;
@@ -1524,19 +1492,21 @@ public class Charts extends ApplicationFrame{
 		private static DefaultTableXYDataset createXDataset()
 		{
 			System.out.println("In createXDataset");
+			long start = System.nanoTime();
 			DefaultTableXYDataset dataset = new DefaultTableXYDataset();
-			System.out.println(dataset.getIntervalWidth());
 			for(int i = 0; i < taxaForDisplay.size(); i ++)
 			{
 				XYSeries s = new XYSeries(taxaForDisplay.get(i), true, false);
 
-				double [] bins = segregateByBucket(contigByTaxa.get(taxaForDisplay.get(i)), 100, .01, 0);
+				double [] bins = segregateByBucket(contigByTaxa.get(taxaForDisplay.get(i)), 100, .01);
 				for(int j = 0; j < bins.length; j ++)	
 				{
 					s.add(j*.01, bins[j]);
 				}
 				dataset.addSeries(s);
 			}
+			long end = System.nanoTime();
+			System.out.println("x dataset " + (end - start));
 			return dataset;
 		}
 
@@ -1548,12 +1518,15 @@ public class Charts extends ApplicationFrame{
 		private static ArrayList<String> sortBySpan (ArrayList<String>unsorted)
 		{
 			System.out.println("in sortBySpan");
+			long start = System.nanoTime();
 			ArrayList<String> sorted = new ArrayList<String>();
 			for(int i = 0; i < unsorted.size(); i ++)
 			{
 				sorted = sortSpan(sorted, unsorted.get(i));
 			}
 			Collections.reverse(sorted); //First in last out in terms of rendering, 
+			long end = System.nanoTime();
+			System.out.println("sort by span " + (end - start));
 			return sorted;
 		}
 
@@ -1585,6 +1558,7 @@ public class Charts extends ApplicationFrame{
 				}
 				count ++;
 			}
+
 			return addToMe;
 		}
 
@@ -1607,11 +1581,14 @@ public class Charts extends ApplicationFrame{
 		public int getSpan (ArrayList<Contig> selection)
 		{
 			System.out.println("in getSpan");
+			long start = System.nanoTime();
 			int span = 0;
 			for (int i = 0; i < selection.size(); i ++)
 			{
 				span += selection.get(i).getLen();
 			}
+			long end = System.nanoTime();
+			System.out.println("get span" + (end - start));
 			return span;
 		}
 
@@ -1640,16 +1617,12 @@ public class Charts extends ApplicationFrame{
 		public double getMedianLength(ArrayList<Contig> selection)
 		{
 			System.out.println("in getMedianLength");
+			long start = System.nanoTime();
 			if(selection.size() == 0)
 				return -1.0;
 
 			Collections.sort(selection, new ContigComparator());
-			/*
-			for(int i = 0; i < sorted.size(); i ++)
-			{
-				System.out.println(sorted.get(i));
-			}
-			 */
+		
 			if(selection.size() == 1)
 				return selection.get(0).getLen()*1.0;
 			else if (selection.size() == 2)
@@ -1659,15 +1632,20 @@ public class Charts extends ApplicationFrame{
 				if(selection.size()%2 != 0)
 				{
 					int index = (selection.size()/2) + 1;
+					long end = System.nanoTime();
+					System.out.println("median length " + (end - start));
 					return selection.get(index).getLen()*1.0;
 				}
 				else
 				{
 					int index1 = (selection.size()/2);
 					int index2 = index1 + 1;
+					long end = System.nanoTime();
+					System.out.println("median length " + (end - start));
 					return (selection.get(index1).getLen() + selection.get(index2).getLen())/2.0;
 				}
 			}
+			
 			return -10; // check that All possible medians are caught
 		}
 
@@ -1679,11 +1657,14 @@ public class Charts extends ApplicationFrame{
 		public double getMeanGC(ArrayList<Contig> selection)
 		{
 			System.out.println("in getMeanGC");
+			long start = System.nanoTime();
 			double total = 0;
 			for (int i = 0; i < selection.size(); i ++)
 			{
 				total += selection.get(i).getGC();
 			}
+			long end = System.nanoTime();
+			System.out.println("mean gc " + (end - start));
 			return total/selection.size();
 		}
 
@@ -1698,8 +1679,9 @@ public class Charts extends ApplicationFrame{
 		public int calculateN50(ArrayList<Contig> selection)
 		{
 			System.out.println("in calculateN50");
-			Collections.sort(selection, new ContigComparator().reversed());
 			long start = System.nanoTime();
+
+			Collections.sort(selection, new ContigComparator().reversed());
 			int total = 0;
 			for(int i = 0; i < selection.size(); i ++)
 			{
@@ -1711,19 +1693,20 @@ public class Charts extends ApplicationFrame{
 			{
 				if(con > border)
 				{
+					long end = System.nanoTime();
+					System.out.println("N50 time:" + (end - start));
 					return selection.get(i).getLen();
-
 				}
 				con += selection.get(i).getLen();
 			}
-			long end = System.nanoTime();
-			System.out.println("N50 time:" + (end - start));
+
 			return -1;
 		}
 
 		private String [] [] separateByTaxa(ArrayList<Contig> selected) 
 		{
 			System.out.println("In separateByTaxa");
+			long start = System.nanoTime();
 			HashMap<String, ArrayList<Contig>> grouped = new HashMap<String, ArrayList<Contig>>();
 			HashMap<String, Integer> groupedSpan = new HashMap<String, Integer>();
 			String [] [] groupedSpanTotalsByTaxa;
@@ -1756,15 +1739,19 @@ public class Charts extends ApplicationFrame{
 				groupedSpanTotalsByTaxa[count][1] = Integer.toString(groupedSpan.get(taxa));
 				count ++;
 			}
+			long end = System.nanoTime();
+			System.out.println("Grouped span totals by taxa: " + (end - start));
 			return groupedSpanTotalsByTaxa;
 		}
 
 		private void statistics(ArrayList<Contig> selected, DefaultTableModel display)
 		{
 			System.out.println("in statistics");
+			long start = System.nanoTime();
 			int number = selected.size();
 			DecimalFormat df = new DecimalFormat("#.##");
 			DecimalFormat spanDf = new DecimalFormat("#.####");
+			DecimalFormat wholeNumber = new DecimalFormat("#,###.###");
 			while(display.getRowCount() > 0)
 			{
 				display.removeRow(0);
@@ -1776,12 +1763,12 @@ public class Charts extends ApplicationFrame{
 			double medianLen = getMedianLength(selected);
 			double meanLen = getMeanLength(selected);
 			int span = getSpan(selected);
-			String selectedSpan = Integer.toString(span) + "/" + Integer.toString(totalLength);
+			String selectedSpan = wholeNumber.format(span) + "/" + wholeNumber.format(totalLength);//Integer.toString(span) + "/" + Integer.toString(totalLength);
 			display.addRow(new Object[] {"Mean length: ", df.format(meanLen), ""});
 			display.addRow(new Object[] {"Median length: ", df.format(medianLen), ""});
 			display.addRow(new Object[] {"Mean GC: ", df.format(meanGC), ""});
-			display.addRow(new Object[] {"Span: ", selectedSpan, ""});
-			display.addRow(new Object[] {"No. of contigs displayed/ Total: ", number + "/" + totalNumberOfContigs, df.format(((number*1.0)/totalNumberOfContigs)*100) });
+			display.addRow(new Object[] {"Span: ", selectedSpan, df.format(((span*1.0)/totalLength)*100)});
+			display.addRow(new Object[] {"No. of contigs displayed/ Total: ", wholeNumber.format(number) + "/" + wholeNumber.format(totalNumberOfContigs), df.format(((number*1.0)/totalNumberOfContigs)*100) });
 			display.addRow(new Object[] {"N50: ", new Integer(n50), ""}); 
 			display.addRow(new Object[] {"", }); 
 			display.addRow(new Object[] {"Span breakdown: ", "Taxa/Selection", "Percentage"}); 
@@ -1789,10 +1776,11 @@ public class Charts extends ApplicationFrame{
 			String[][] selectedContigByTaxa = separateByTaxa(selected);
 			for(int i = 0; i < selectedContigByTaxa.length; i ++)
 			{
-				display.addRow(new Object[] {selectedContigByTaxa[i][0], new String(selectedContigByTaxa[i][1]+"/"+span), spanDf.format((Double.parseDouble(selectedContigByTaxa[i][1])/span)*100)}); 
+				display.addRow(new Object[] {selectedContigByTaxa[i][0], new String(wholeNumber.format(selectedContigByTaxa[i][1])+"/"+wholeNumber.format(span)), spanDf.format((Double.parseDouble(selectedContigByTaxa[i][1])/span)*100)}); 
 			}
 
-
+			long end = System.nanoTime();
+			System.out.println("Statistics time: " + (end - start));
 		}
 
 
@@ -1881,9 +1869,8 @@ public class Charts extends ApplicationFrame{
 		public static boolean readFile()
 		{
 			System.out.println("in readfile");
-
-			history = new ArrayList<String>();
 			long start = System.nanoTime();
+			history = new ArrayList<String>();
 			BufferedReader bufferedReader = null;
 			boolean correct = true;
 			try 
@@ -1901,7 +1888,6 @@ public class Charts extends ApplicationFrame{
 					}
 					else
 					{	
-						System.out.println(addMe.getID());
 						contigMaster.add(addMe);
 						contigSet.add(addMe); //add Contig to Arraylist
 						String tax = addMe.getTax()[taxaIndex];
@@ -2094,22 +2080,16 @@ public class Charts extends ApplicationFrame{
 			return taxaByColor;
 		}
 
-		private static double [] segregateByBucket(ArrayList<Contig> series, int numBins, double splitFactor, int category)
+		private static double [] segregateByBucket(ArrayList<Contig> series, int numBins, double splitFactor)
 		{
 			System.out.println("in segregateByBucket");
+			long start = 0; 
 			double [] collection = new double [numBins];
 			for(int i = 0; i < series.size(); i ++)
 			{
 				double value = -1;
-				if(category == 0)
-					value = series.get(i).getGC();
-				else if (category == 1)
-					value = series.get(i).getCov()[covLibraryIndex];
-				else
-				{
-					System.out.println("Incorrect category value, set to GC");
-					value = 0;
-				}
+
+				value = series.get(i).getGC();
 
 				for(int j = 0; j < collection.length; j ++)
 				{
@@ -2123,6 +2103,8 @@ public class Charts extends ApplicationFrame{
 				if (value > numBins*splitFactor)
 					System.out.println("Out of bounds");
 			}
+			long end = System.nanoTime();
+			System.out.println("Segregate By bucket: "+  (end - start));
 			return collection;
 		}
 
@@ -2130,9 +2112,9 @@ public class Charts extends ApplicationFrame{
 		private static XYSeriesCollection createDataset() 
 		{
 			System.out.println("in createDataset");
+			long start = System.nanoTime();
 			// ArrayList containing top taxa which need to be displayed
 			XYSeriesCollection dataset = new XYSeriesCollection();
-			//getTaxaForDisplay();
 
 			for(int i = 0; i < taxaForDisplay.size(); i ++) //loop through arrayLists associated with top taxa by span
 			{
@@ -2167,6 +2149,8 @@ public class Charts extends ApplicationFrame{
 				}
 				dataset.addSeries(series);
 			}
+			long end = System.nanoTime();
+			System.out.println("create datset: " + (end - start));
 			return dataset;
 
 		}
@@ -2226,7 +2210,6 @@ public class Charts extends ApplicationFrame{
 			ArrayList<Contig> selected = new ArrayList<Contig>();
 			while(itr.hasNext())
 			{
-				System.out.println("In itr.hasNext()");	
 				XYCursor dc = (XYCursor)itr.next();
 				Comparable seriesKey = this.dataset.getSeriesKey(dc.series);
 
@@ -2241,8 +2224,6 @@ public class Charts extends ApplicationFrame{
 					}
 				} */
 				selected.add(taxa.get(dc.item));
-				System.out.println("Item " + taxa.get(dc.item) );
-				System.out.println("series key " + seriesKey);
 			}
 			System.out.println("size of selected: " + selected.size());
 			if(selected.size() > 0)
