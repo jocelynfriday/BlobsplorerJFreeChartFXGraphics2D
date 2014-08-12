@@ -105,7 +105,6 @@ public class Charts extends ApplicationFrame{
 	private static final long serialVersionUID = 1L;
 
 
-
 	public static class BlobPanel extends DemoPanel implements  ChangeListener, ChartChangeListener, KeyListener , SelectionChangeListener<XYCursor>
 	{
 		/**
@@ -791,6 +790,15 @@ public class Charts extends ApplicationFrame{
 						e1.printStackTrace();
 					} catch (SVGGraphics2DIOException e1) {
 						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+					catch (IOException e2) 
+					{
+						errorMessage.setText("IO exception");
+						e2.printStackTrace();
+					}
+					catch (SecurityException e1)
+					{
 						e1.printStackTrace();
 					}
 					finally
@@ -1776,7 +1784,8 @@ public class Charts extends ApplicationFrame{
 			String[][] selectedContigByTaxa = separateByTaxa(selected);
 			for(int i = 0; i < selectedContigByTaxa.length; i ++)
 			{
-				display.addRow(new Object[] {selectedContigByTaxa[i][0], new String(wholeNumber.format(selectedContigByTaxa[i][1])+"/"+wholeNumber.format(span)), spanDf.format((Double.parseDouble(selectedContigByTaxa[i][1])/span)*100)}); 
+				int selectedSpan1 = Integer.parseInt(selectedContigByTaxa[i][1]);
+				display.addRow(new Object[] {selectedContigByTaxa[i][0], new String(wholeNumber.format(selectedSpan1)+"/"+wholeNumber.format(span)), spanDf.format((Double.parseDouble(selectedContigByTaxa[i][1])/span)*100)}); 
 			}
 
 			long end = System.nanoTime();
