@@ -100,7 +100,7 @@ import org.w3c.dom.Document;
 
 public class Charts extends ApplicationFrame{
 	/**
-	 * 
+	 *  Taxon-annotated coverage-GC plot (TAGC) is the formal name for the mainChart
 	 */
 	private static final long serialVersionUID = 1L;
 
@@ -161,6 +161,12 @@ public class Charts extends ApplicationFrame{
 
 		private static  ArrayList<String> taxaForDisplay;
 
+		/**
+		 * Central control for Blobsplorer and controls how a session is created.  
+		 * @param file blobplot.txt file to be used for a session
+		 * @param covLevel user set default coverage
+		 * @param eValue user set default E-Value
+		 */
 		public BlobPanel(File file, int covLevel, double eValue)
 		{
 			super(new BorderLayout());
@@ -646,7 +652,7 @@ public class Charts extends ApplicationFrame{
 			checkBoxSubChartPanel.add(yPercentage);
 			filterPanel.add(checkBoxSubChartPanel);
 			filterPanel.add(buttonPanel);
-			
+
 			long end = System.nanoTime();
 			System.out.println("Filter panel " + (end - start));
 			return filterPanel;
@@ -704,11 +710,17 @@ public class Charts extends ApplicationFrame{
 			System.out.println("reload minus reset and stats " + (end - start)); 
 			resetVisible();
 			statistics(contigSet, this.stats);
-			
+
 		}
 
 
-
+		/**
+		 * Controls the exports for Blobsplorer.  Users are given the option of exporting four SVGs, a new blobplot.txt file containing visible contigs, contig IDs grouped by visible and hidden into two files and a filtering history file.
+		 * If files already exist, they will not be overwritten.  
+		 * @return the export panel
+		 * @see reateTabbedControl
+		 * @see Batik 1.7
+		 */
 		private JPanel createExportPanel() 
 		{
 			long start = System.nanoTime();
@@ -725,8 +737,7 @@ public class Charts extends ApplicationFrame{
 			create.addActionListener(new ActionListener()
 			{
 				public void actionPerformed(ActionEvent e)
-				{
-					long start = System.nanoTime();
+				{					
 					String svgName = svgField.getText();
 					if(svgName == null)
 						JOptionPane.showMessageDialog(null,"Please enter a new file name");
@@ -810,8 +821,6 @@ public class Charts extends ApplicationFrame{
 								outY.close();
 								outX.close();
 								outLegend.close();
-								long end = System.nanoTime();
-								System.out.println("Export time: " + (end - start));
 							}
 						} catch (IOException e1) {
 							// TODO Auto-generated catch block
@@ -1162,17 +1171,16 @@ public class Charts extends ApplicationFrame{
 			historyPanel.add(historyButton);
 			exportPanel.add(historyPanel);
 
-			long end = System.nanoTime();
-			System.out.println("export panel " + (end - start));
 			return exportPanel;
 		}
 
-
+		/**
+		 * Creates the panel for handling mouse actions, data extension and user selections for the TAGC plot.  
+		 * @return the central panel containing the TAGC plot
+		 */
 		public JPanel createMainPanel()
 		{
-			System.out.println("in createMainPanel");
 			XYDataset xydataset = createDataset();
-			long start = System.nanoTime();
 			DatasetSelectionExtension<XYCursor> datasetExtension = new XYDatasetSelectionExtension(xydataset);
 
 			datasetExtension.addChangeListener(this);
@@ -1194,17 +1202,17 @@ public class Charts extends ApplicationFrame{
 			DatasetExtensionManager dExManager = new DatasetExtensionManager();
 			dExManager.registerDatasetExtension(datasetExtension);
 			panel.setSelectionManager(new EntitySelectionManager(panel, new Dataset[] {xydataset}, dExManager));
+
 			
-			long end = System.nanoTime();
-			System.out.println("create main panel minus create dataset " + (end - start));
 			return panel;
 		}
 
+		/**
+		 * Changes X and Y subplots to zoom with the main plot.   
+		 */
 		public void chartChanged(ChartChangeEvent event)
 		{
-			System.out.println("in chartChanged");
-			long start = System.nanoTime();
-			XYPlot plot = (XYPlot) this.mainChart.getPlot();
+						XYPlot plot = (XYPlot) this.mainChart.getPlot();
 			if(!plot.getDomainAxis().getRange().equals(this.lastXRange))
 			{
 				this.lastXRange = plot.getDomainAxis().getRange();
@@ -1217,8 +1225,7 @@ public class Charts extends ApplicationFrame{
 				XYPlot plotY = (XYPlot) this.ySubChart.getPlot();
 				plotY.getDomainAxis().setRange(this.lastYRange);
 			}
-			long end = System.nanoTime();
-			System.out.println("chart changed " + (end - start));
+			
 		}
 
 		/**
@@ -1409,8 +1416,6 @@ public class Charts extends ApplicationFrame{
 				checkBoxPanel.add(box);
 			}
 			previousTaxa = taxaIndex;
-			long end = System.nanoTime();
-			System.out.println("update " + (end - start));
 		}
 
 		/**
@@ -1427,7 +1432,11 @@ public class Charts extends ApplicationFrame{
 			System.out.println("get top taxa " + (end - start));
 		}
 
-		
+
+		/**
+		 * Creates a DefaultTableXYDataset for COV subplot
+		 * @return  dataset for COV subplot 
+		 */
 		private static DefaultTableXYDataset createYDataset()
 		{
 			System.out.println("in createYDataset");
@@ -1468,39 +1477,14 @@ public class Charts extends ApplicationFrame{
 
 		}
 
-		private static double [] segregateYByBucket(ArrayList<Contig> series)
-		{
-			
-			double [] bins = new double [1000];
-			double range = maxY - minY;
-			double scale = range/1000.0;
-			double bin;
-			for(int i = 0; i < series.size(); i ++)
-			{
-				double placeMe = series.get(i).getCov()[covLibraryIndex];
-				for(int j = 0; j < 1000; j ++)
-				{
-					bin = minY + j*scale;
-					if(placeMe <= bin)
-					{
-						bins[j] += 1;
-						break;
-					}
-
-				}
-				if((minY + 1000*scale) < placeMe)
-				{
-					System.out.println("OUT OF RANGE IN PLACE segregateYByBucket");
-				}
-			}
-			return bins;
-
-		}
-
+		
+		/**
+		 * Creates the dataset to be used by the plot on the X axis, the GC subplot
+		 * @return the dataset for the X axis plot 
+		 */
 		private static DefaultTableXYDataset createXDataset()
 		{
 			System.out.println("In createXDataset");
-			long start = System.nanoTime();
 			DefaultTableXYDataset dataset = new DefaultTableXYDataset();
 			for(int i = 0; i < taxaForDisplay.size(); i ++)
 			{
@@ -1513,34 +1497,33 @@ public class Charts extends ApplicationFrame{
 				}
 				dataset.addSeries(s);
 			}
-			long end = System.nanoTime();
-			System.out.println("x dataset " + (end - start));
 			return dataset;
 		}
 
 
 
-		/*
-		 * Returns an ArrayList of Taxa sorted by their span
+		/**
+		 * Sorts taxa names by their total spans in descending order 
+		 * @param unsorted unsorted ArrayList of taxa names
+		 * @return an ArrayList of taxa sorted by span 
 		 */
 		private static ArrayList<String> sortBySpan (ArrayList<String>unsorted)
 		{
-			System.out.println("in sortBySpan");
-			long start = System.nanoTime();
 			ArrayList<String> sorted = new ArrayList<String>();
 			for(int i = 0; i < unsorted.size(); i ++)
 			{
 				sorted = sortSpan(sorted, unsorted.get(i));
 			}
 			Collections.reverse(sorted); //First in last out in terms of rendering, 
-			long end = System.nanoTime();
-			System.out.println("sort by span " + (end - start));
 			return sorted;
 		}
 
-		/*
-		 * helper method for sortBySpan(ArrayList<String> unsorted. 
+		/**
 		 * Takes a sorted ArrayList and the element to be added, placing the new element in the sorted ArrayList
+		 * A helper method for sortBySpan(ArrayList<String> unsorted. 
+		 * @param addToMe sorted ArrayList of taxa names 
+		 * @param addMe name of taxa to be placed in addToMe based on total span
+		 * @return 
 		 */
 		private static ArrayList<String> sortSpan(ArrayList<String> addToMe, String addMe)
 		{
@@ -1578,9 +1561,6 @@ public class Charts extends ApplicationFrame{
 		 *
 		 ***************************************/
 
-		/*
-		 * Intended to be for calculating the span of a selected group of Contigs
-		 */
 		/**
 		 * Sums the lengths of the contigs
 		 * @param selection an ArrayList of contigs
@@ -1630,7 +1610,7 @@ public class Charts extends ApplicationFrame{
 				return -1.0;
 
 			Collections.sort(selection, new ContigComparator());
-		
+
 			if(selection.size() == 1)
 				return selection.get(0).getLen()*1.0;
 			else if (selection.size() == 2)
@@ -1640,20 +1620,16 @@ public class Charts extends ApplicationFrame{
 				if(selection.size()%2 != 0)
 				{
 					int index = (selection.size()/2) + 1;
-					long end = System.nanoTime();
-					System.out.println("median length " + (end - start));
 					return selection.get(index).getLen()*1.0;
 				}
 				else
 				{
 					int index1 = (selection.size()/2);
 					int index2 = index1 + 1;
-					long end = System.nanoTime();
-					System.out.println("median length " + (end - start));
 					return (selection.get(index1).getLen() + selection.get(index2).getLen())/2.0;
 				}
 			}
-			
+
 			return -10; // check that All possible medians are caught
 		}
 
@@ -1664,21 +1640,15 @@ public class Charts extends ApplicationFrame{
 		 */
 		public double getMeanGC(ArrayList<Contig> selection)
 		{
-			System.out.println("in getMeanGC");
-			long start = System.nanoTime();
 			double total = 0;
 			for (int i = 0; i < selection.size(); i ++)
 			{
 				total += selection.get(i).getGC();
 			}
-			long end = System.nanoTime();
-			System.out.println("mean gc " + (end - start));
 			return total/selection.size();
 		}
 
-		/*
-		 * Retrns the N50 of a selected group of Contigs.  If a contig bridges the rounded midpoint, it is included in the N50 calculation
-		 */
+
 		/**
 		 * 
 		 * @param selection
@@ -1686,9 +1656,6 @@ public class Charts extends ApplicationFrame{
 		 */
 		public int calculateN50(ArrayList<Contig> selection)
 		{
-			System.out.println("in calculateN50");
-			long start = System.nanoTime();
-
 			Collections.sort(selection, new ContigComparator().reversed());
 			int total = 0;
 			for(int i = 0; i < selection.size(); i ++)
@@ -1701,8 +1668,6 @@ public class Charts extends ApplicationFrame{
 			{
 				if(con > border)
 				{
-					long end = System.nanoTime();
-					System.out.println("N50 time:" + (end - start));
 					return selection.get(i).getLen();
 				}
 				con += selection.get(i).getLen();
@@ -1711,10 +1676,13 @@ public class Charts extends ApplicationFrame{
 			return -1;
 		}
 
+		/**
+		 * Separates a mixed group of contigs by their Taxa and returns a 2D array with the taxa name and the span of that taxa
+		 * @param selected ArrayList of contigs which need to be classified by taxa
+		 * @return a 2D array containing taxa name and the taxa's span as an integer
+		 */
 		private String [] [] separateByTaxa(ArrayList<Contig> selected) 
 		{
-			System.out.println("In separateByTaxa");
-			long start = System.nanoTime();
 			HashMap<String, ArrayList<Contig>> grouped = new HashMap<String, ArrayList<Contig>>();
 			HashMap<String, Integer> groupedSpan = new HashMap<String, Integer>();
 			String [] [] groupedSpanTotalsByTaxa;
@@ -1747,15 +1715,16 @@ public class Charts extends ApplicationFrame{
 				groupedSpanTotalsByTaxa[count][1] = Integer.toString(groupedSpan.get(taxa));
 				count ++;
 			}
-			long end = System.nanoTime();
-			System.out.println("Grouped span totals by taxa: " + (end - start));
 			return groupedSpanTotalsByTaxa;
 		}
 
+		/**
+		 * The control method for calculating and writing to the Stats Panel
+		 * @param selected ArrayList of contigs selected by user
+		 * @param display The table to which the statistics will be displayed
+		 */
 		private void statistics(ArrayList<Contig> selected, DefaultTableModel display)
 		{
-			System.out.println("in statistics");
-			long start = System.nanoTime();
 			int number = selected.size();
 			DecimalFormat df = new DecimalFormat("#.##");
 			DecimalFormat spanDf = new DecimalFormat("#.####");
@@ -1764,7 +1733,6 @@ public class Charts extends ApplicationFrame{
 			{
 				display.removeRow(0);
 			}
-
 
 			int n50 = calculateN50(selected);
 			double meanGC = getMeanGC(selected);
@@ -1788,19 +1756,14 @@ public class Charts extends ApplicationFrame{
 				display.addRow(new Object[] {selectedContigByTaxa[i][0], new String(wholeNumber.format(selectedSpan1)+"/"+wholeNumber.format(span)), spanDf.format((Double.parseDouble(selectedContigByTaxa[i][1])/span)*100)}); 
 			}
 
-			long end = System.nanoTime();
-			System.out.println("Statistics time: " + (end - start));
 		}
 
-
-
-
-
+		/**
+		 * Re-allocates contigs based on filtering criterai and repopualates HashMaps accordingly
+		 */
 		public static void reAllocate()
 		{
 			String tax;
-			System.out.println("in re-readfile");
-			long start = System.nanoTime();
 			contigByTaxa.clear();
 			taxLevelSpan.clear();
 			contigSet.clear();
@@ -1860,25 +1823,23 @@ public class Charts extends ApplicationFrame{
 
 			}
 
-			long end = System.nanoTime();
-			long difference = end - start;
-			System.out.println("re-read time: " +(difference));
 		}
 
 
 		/*
+		 * 
+		 */
+		/**
 		 * Reads file passed in from JavaFX scene in Test.java
 		 * parses each line of the file to generate a Contig
 		 * Passes on replacement value for "N/A" result, E values to the user entered eValue, to parseContig(String text, double eValue) 
 		 * Adds new contig to ArrayList of existing contigs 
 		 * Builds HashMap<String, ArrayList<Contig>> contigByTaxa, where Contigs are grouped by taxa
 		 * Builds HashMap <String, Integer> taxLevelSpan, where the span of each taxa is calculated 
-		 * Returns false if error occures
+		 * @return false if error occures and true otherwise
 		 */
 		public static boolean readFile()
 		{
-			System.out.println("in readfile");
-			long start = System.nanoTime();
 			history = new ArrayList<String>();
 			BufferedReader bufferedReader = null;
 			boolean correct = true;
@@ -1894,6 +1855,7 @@ public class Charts extends ApplicationFrame{
 					if (addMe == null)
 					{
 						System.out.println("Unable to parseContig");
+
 					}
 					else
 					{	
@@ -1928,6 +1890,11 @@ public class Charts extends ApplicationFrame{
 						}
 					}
 				} 
+				if(contigMaster.size() == 0)
+				{
+					System.out.println("Unable to detect any contigs, exiting program");
+					System.exit(0);
+				}
 				history.add("Initial default minimum coverage: " + defaultMinCov);
 				history.add("Initial default E-Value: " + defaultEValue);
 				history.add("Initial taxonomic level: " + taxaNames[taxaIndex]);
@@ -1957,14 +1924,16 @@ public class Charts extends ApplicationFrame{
 					Logger.getLogger(Driver.class.getName()).log(Level.SEVERE, null, ex);
 				}
 			} 
-			long end = System.nanoTime();
-			System.out.println("File read time: " + (end - start));
 			return correct;
 		}
 
-		/*
+	
+		/**
 		 * Parses out Contrig from sinle line of text and replaces evalue "N/A" results with the user defined double
 		 * Parsing structure based on https://github.com/blaxterlab/blobology/tree/master/dev format as of 18/06/14
+		 * @param newEntry the current line from the file which needs parsing
+		 * @param userDefinedEValue the default E-value from the user
+		 * @return a Contig Object or null if the Contig cannot be parsed
 		 */
 		private static Contig parseContig(String newEntry, double userDefinedEValue)
 		{
@@ -1985,6 +1954,7 @@ public class Charts extends ApplicationFrame{
 			int count = 0;
 			int taxCount = 0;
 			StringTokenizer parse;
+			try{
 			st = new StringTokenizer(newEntry, "\t");
 			id = st.nextToken();
 			len = Integer.parseInt(st.nextToken());
@@ -1993,7 +1963,6 @@ public class Charts extends ApplicationFrame{
 			covST = new StringTokenizer(covString, ";");
 			double [] cov = new double [covST.countTokens()];
 			covLibraryNames = new String [covST.countTokens()];
-			try{
 				while(covST.hasMoreTokens())
 				{
 					tempString = covST.nextToken();
@@ -2052,13 +2021,17 @@ public class Charts extends ApplicationFrame{
 			}
 			catch (NoSuchElementException nsee)
 			{
-				JOptionPane.showMessageDialog(null,"Unable to parse contig");
+				System.out.println("Unable to parse contig");
 				return null;
 			}
 
 			return contigToAdd;
 		}
 
+		/**
+		 * Associates taxa with color
+		 * @return a HashMap associating a taxa with a color
+		 */
 		private HashMap<String, Color> createColorHashMap()
 		{
 			HashMap<String, Color> taxaByColor = new HashMap<String, Color>();
@@ -2089,10 +2062,15 @@ public class Charts extends ApplicationFrame{
 			return taxaByColor;
 		}
 
+		/**
+		 * Creates array containing counts of how many contigs fall into each bin
+		 * @param series Group of contigs which need to be binned
+		 * @param numBins number of bins
+		 * @param splitFactor distance between bins
+		 * @return
+		 */
 		private static double [] segregateByBucket(ArrayList<Contig> series, int numBins, double splitFactor)
 		{
-			System.out.println("in segregateByBucket");
-			long start = 0; 
 			double [] collection = new double [numBins];
 			for(int i = 0; i < series.size(); i ++)
 			{
@@ -2112,16 +2090,17 @@ public class Charts extends ApplicationFrame{
 				if (value > numBins*splitFactor)
 					System.out.println("Out of bounds");
 			}
-			long end = System.nanoTime();
-			System.out.println("Segregate By bucket: "+  (end - start));
 			return collection;
 		}
 
-
+		/**
+		 * Creates dataset for the TAGC plot using 
+		 * @return dataset for TAGC plot 
+		 * 
+		 */
 		private static XYSeriesCollection createDataset() 
 		{
-			System.out.println("in createDataset");
-			long start = System.nanoTime();
+
 			// ArrayList containing top taxa which need to be displayed
 			XYSeriesCollection dataset = new XYSeriesCollection();
 
@@ -2129,10 +2108,7 @@ public class Charts extends ApplicationFrame{
 			{
 				String taxa = taxaForDisplay.get(i);
 				ArrayList<Contig> taxaSet = contigByTaxa.get(taxa);
-				//gc = new double [taxaSet.size()];
-				//	cov = new double [taxaSet.size()];
 				XYSeries series = new XYSeries(taxa, false); 
-				//len = new double [taxaSet.size()];
 				for(int j = 0; j < taxaSet.size(); j ++)
 				{	
 					//as 0 cannot be displayed on log scale, set libraries where coverage is 0 to minCov until
@@ -2158,8 +2134,6 @@ public class Charts extends ApplicationFrame{
 				}
 				dataset.addSeries(series);
 			}
-			long end = System.nanoTime();
-			System.out.println("create datset: " + (end - start));
 			return dataset;
 
 		}
@@ -2198,16 +2172,15 @@ public class Charts extends ApplicationFrame{
 
 
 
-		/*
-		 * (non-Javadoc)
+		/**
+		 * Colelcts Contigs selected within user areas and sends the list to <code>statistics </code> for stats calculations.  
+		 * @param event List of XYCursor points in selected area
 		 * @see org.jfree.data.general.SelectionChangeListener#selectionChanged(org.jfree.data.general.SelectionChangeEvent)
 		 */
-
 		@Override
 		public void selectionChanged(SelectionChangeEvent<XYCursor> event) 
 		{
-			System.out.println("In selection Changed");
-			long start = System.nanoTime();
+
 			while(this.model.getRowCount() > 0)
 			{
 				this.model.removeRow(0);
@@ -2224,41 +2197,37 @@ public class Charts extends ApplicationFrame{
 
 				ArrayList<Contig> taxa = contigByTaxa.get(seriesKey);
 
-				/*for(int i = 0; i < taxa.size(); i ++)
-				{
-					if(taxa.get(i).getGC() == this.dataset.getXValue(dc.series, dc.item) && taxa.get(i).getCov()[covLibraryIndex] == this.dataset.getYValue(dc.series, dc.item) )
-					{
-						selected.add(taxa.get(i));
-						break;
-					}
-				} */
 				selected.add(taxa.get(dc.item));
 			}
-			System.out.println("size of selected: " + selected.size());
 			if(selected.size() > 0)
 				statistics(selected, this.model);
-			long end = System.nanoTime();
-			System.out.println("Elapsed time of selection and statistics: " + (end - start));
-
 		}
-
-
-
 	}
+	
+	/**
+	 * 
+	 * @param file input file in form of blobplot.text
+	 * @param covNum default coverage value if set to 0
+	 * @param eValue default E-Value if set to N/A
+	 */
 	public Charts(File file, int covNum, double eValue)
 	{
 		super("Blobsplorer");
-		System.out.println("in Charts");
 		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		JPanel content = createDemoPanel(file, covNum, eValue);
 		setContentPane(content);
 	}
 
 
-
+	/**
+	 * Creates the main Panel for Blobsplorer. 
+	 * @param file the input file 
+	 * @param covLevel the default coverage if set to 0
+	 * @param eValue the default E-Value if N/A
+	 * @return the JPanel containing the scatter plot and two sub-plots
+	 */
 	public static  JPanel createDemoPanel(File file, int covLevel, double eValue) 
 	{
-		System.out.println("in createDemoPanel");
 		return new BlobPanel(file, covLevel, eValue);
 	}
 

@@ -22,10 +22,12 @@ Required:
 -Batik 1.7
 -FXGraphics2d 1.0
 
-Ant file included for automatic build.  Simply time ant when in the same directory as the application and build.xml file.  
-
+Steps for Installation:
+1)Download GitHub repository
+2)Either use the build.xml script by typing ‘ant’ to build Blobsplorer 3.0 or use the precompiled version 
+3)Type java -jar Blobsplorer 3.0 to run the application
 Contact details
 
-Association: Edinburgh Genomics, University of Edinburgh
+Association: IEB, University of Edinburgh
 email: fridayjocelyn@gmail.com or jocelynfriday@yahoo.com
 
